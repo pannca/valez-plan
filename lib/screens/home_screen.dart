@@ -212,13 +212,45 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   letterSpacing: -0.5,
                                 ),
                               ),
-                              Text(
-                                dateStr,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: textMuted,
-                                ),
+                              Row(
+                                children: [
+                                  Text(
+                                    dateStr,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: textMuted,
+                                    ),
+                                  ),
+                                  if (!_isToday(_selectedDate)) ...[
+                                    const SizedBox(width: 8),
+                                    GestureDetector(
+                                      onTap: () {
+                                        final today = DateTime.now();
+                                        setState(() => _selectedDate = today);
+                                        _loadPlansForDate(today);
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF388AF6)
+                                              .withValues(alpha: 0.15),
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                        ),
+                                        child: const Text(
+                                          'Ke Hari Ini',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w800,
+                                            color: Color(0xFF388AF6),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ],
                           ),

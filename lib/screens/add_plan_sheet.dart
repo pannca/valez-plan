@@ -21,11 +21,25 @@ class _AddPlanSheetState extends State<AddPlanSheet> {
   final _titleController = TextEditingController();
   final _notesController = TextEditingController();
 
+  late DateTime _targetDate;
   TimeOfDay _selectedTime = TimeOfDay.now();
   String _selectedCategory = 'Kerja';
   String _repeatType = 'none'; // 'none', 'daily', 'weekdays', 'weekends'
   int _earlyReminderMinutes = 10; // 0 (tepat waktu), 5, 10, 15
   bool _isAlarmEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _targetDate = widget.initialDate ?? DateTime.now();
+  }
+
+  bool get _isTargetDateToday {
+    final now = DateTime.now();
+    return _targetDate.year == now.year &&
+        _targetDate.month == now.month &&
+        _targetDate.day == now.day;
+  }
 
   final Map<String, ({Color color, IconData icon})> _categoryConfig = {
     'Kerja': (color: const Color(0xFF388AF6), icon: Icons.business_center_rounded),
@@ -72,11 +86,10 @@ class _AddPlanSheetState extends State<AddPlanSheet> {
     final title = _titleController.text.trim();
     if (title.isEmpty) return;
 
-    final targetDate = widget.initialDate ?? DateTime.now();
     final scheduledDateTime = DateTime(
-      targetDate.year,
-      targetDate.month,
-      targetDate.day,
+      _targetDate.year,
+      _targetDate.month,
+      _targetDate.day,
       _selectedTime.hour,
       _selectedTime.minute,
     );
@@ -164,7 +177,72 @@ class _AddPlanSheetState extends State<AddPlanSheet> {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
+
+            // Banner Tanggal Target Agenda
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: _isTargetDateToday
+                    ? const Color(0xFF388AF6).withValues(alpha: 0.12)
+                    : const Color(0xFFFF9F43).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _isTargetDateToday
+                      ? const Color(0xFF388AF6).withValues(alpha: 0.3)
+                      : const Color(0xFFFF9F43).withValues(alpha: 0.4),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _isTargetDateToday
+                        ? Icons.today_rounded
+                        : Icons.event_rounded,
+                    size: 16,
+                    color: _isTargetDateToday
+                        ? const Color(0xFF388AF6)
+                        : const Color(0xFFFF9F43),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _isTargetDateToday
+                          ? 'Untuk Hari Ini (${DateFormat('EEEE, d MMM').format(_targetDate)})'
+                          : 'Jadwal Tanggal: ${DateFormat('EEEE, d MMM').format(_targetDate)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: _isTargetDateToday
+                            ? const Color(0xFF388AF6)
+                            : const Color(0xFFFF9F43),
+                      ),
+                    ),
+                  ),
+                  if (!_isTargetDateToday)
+                    GestureDetector(
+                      onTap: () => setState(() => _targetDate = DateTime.now()),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF388AF6),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'Ubah ke Hari Ini',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
 
             // Input Judul
             Container(
@@ -262,6 +340,48 @@ class _AddPlanSheetState extends State<AddPlanSheet> {
                   ),
                 ),
               ],
+            ),
+
+            // Peringatan jika jam yang dipilih sudah lewat hari ini
+            Builder(
+              builder: (_) {
+                final now = DateTime.now();
+                final isPast = _isTargetDateToday &&
+                    (_selectedTime.hour < now.hour ||
+                        (_selectedTime.hour == now.hour &&
+                            _selectedTime.minute <= now.minute));
+                if (!isPast) return const SizedBox.shrink();
+
+                return Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF5252).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: const Color(0xFFFF5252).withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline_rounded,
+                          size: 14, color: Color(0xFFFF5252)),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Jam ${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')} sudah lewat hari ini. Alarm tidak akan bunyi.',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFFFF5252),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
             if (_isAlarmEnabled) ...[
               const SizedBox(height: 14),

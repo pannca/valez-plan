@@ -85,6 +85,16 @@ class DaySelectorBar extends StatelessWidget {
                       color: isSelected ? Colors.white : unselectedNumColor,
                     ),
                   ),
+                  if (isToday)
+                    Container(
+                      margin: const EdgeInsets.only(top: 2),
+                      width: 5,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isSelected ? Colors.white : const Color(0xFF388AF6),
+                      ),
+                    ),
                 ],
               ),
             ),

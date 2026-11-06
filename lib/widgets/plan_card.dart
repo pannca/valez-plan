@@ -52,6 +52,31 @@ class PlanCard extends StatelessWidget {
     }
   }
 
+  String _getTimeRemainingText(DateTime scheduledTime) {
+    final now = DateTime.now();
+    final diff = scheduledTime.difference(now);
+
+    if (diff.isNegative) {
+      if (diff.inMinutes.abs() < 2) return 'Sekarang';
+      if (diff.inMinutes.abs() < 60) return 'Lewat ${diff.inMinutes.abs()}m';
+      return 'Terlewat';
+    }
+
+    if (diff.inSeconds <= 60) {
+      return '1m lagi';
+    } else if (diff.inMinutes < 60) {
+      return '${diff.inMinutes}m lagi';
+    } else if (diff.inHours < 24 && scheduledTime.day == now.day) {
+      return '${diff.inHours}j ${diff.inMinutes % 60}m lagi';
+    } else {
+      final daysDiff = DateTime(scheduledTime.year, scheduledTime.month, scheduledTime.day)
+          .difference(DateTime(now.year, now.month, now.day))
+          .inDays;
+      if (daysDiff == 1) return 'Besok';
+      return '$daysDiff hari lagi';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final timeStr = DateFormat('HH:mm').format(plan.scheduledTime);
@@ -241,7 +266,8 @@ class PlanCard extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                              if (plan.earlyReminderMinutes > 0) ...[
+                              // Badge Countdown Hitung Mundur Sisa Waktu
+                              if (!plan.isCompleted) ...[
                                 const SizedBox(width: 4),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
@@ -255,17 +281,49 @@ class PlanCard extends StatelessWidget {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       const Icon(
-                                        Icons.hourglass_top_rounded,
+                                        Icons.timer_outlined,
                                         size: 10,
                                         color: Color(0xFF388AF6),
                                       ),
                                       const SizedBox(width: 2),
                                       Text(
-                                        '-${plan.earlyReminderMinutes}m',
+                                        _getTimeRemainingText(plan.scheduledTime),
                                         style: const TextStyle(
                                           fontSize: 9,
                                           fontWeight: FontWeight.bold,
                                           color: Color(0xFF388AF6),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                              // Badge Pengingat Persiapan
+                              if (plan.earlyReminderMinutes > 0) ...[
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 5, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFA259FF)
+                                        .withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.notifications_active_outlined,
+                                        size: 10,
+                                        color: Color(0xFFA259FF),
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Text(
+                                        'Siap -${plan.earlyReminderMinutes}m',
+                                        style: const TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFFA259FF),
                                         ),
                                       ),
                                     ],

@@ -378,3 +378,4 @@ class _PermissionWarningSheetState extends State<PermissionWarningSheet>
     );
   }
 }
+
