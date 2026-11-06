@@ -257,7 +257,7 @@ class PlanCard extends StatelessWidget {
 
                     const SizedBox(height: 8),
 
-                    // Badge Kategori Minimalis
+                    // Badge Kategori Minimalis & Repeat Pill
                     Row(
                       children: [
                         Container(
@@ -277,6 +277,40 @@ class PlanCard extends StatelessWidget {
                             ),
                           ),
                         ),
+                        if (plan.repeatType != 'none') ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF388AF6).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.repeat_rounded,
+                                  size: 10,
+                                  color: Color(0xFF388AF6),
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  plan.repeatType == 'daily'
+                                      ? 'Tiap Hari'
+                                      : (plan.repeatType == 'weekdays'
+                                          ? 'Sen-Jum'
+                                          : 'Sab-Min'),
+                                  style: const TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF388AF6),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ],

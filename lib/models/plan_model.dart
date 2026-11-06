@@ -6,6 +6,7 @@ class PlanModel {
   final bool isAlarmEnabled;
   final bool isCompleted;
   final String category;
+  final String repeatType; // 'none', 'daily', 'weekdays', 'weekends'
 
   PlanModel({
     this.id,
@@ -15,6 +16,7 @@ class PlanModel {
     this.isAlarmEnabled = true,
     this.isCompleted = false,
     this.category = 'Umum',
+    this.repeatType = 'none',
   });
 
   // Konversi ke Map untuk disimpan di database SQLite
@@ -27,6 +29,7 @@ class PlanModel {
       'is_alarm_enabled': isAlarmEnabled ? 1 : 0,
       'is_completed': isCompleted ? 1 : 0,
       'category': category,
+      'repeat_type': repeatType,
     };
   }
 
@@ -40,6 +43,7 @@ class PlanModel {
       isAlarmEnabled: (map['is_alarm_enabled'] as int) == 1,
       isCompleted: (map['is_completed'] as int) == 1,
       category: (map['category'] as String?) ?? 'Umum',
+      repeatType: (map['repeat_type'] as String?) ?? 'none',
     );
   }
 
@@ -51,6 +55,7 @@ class PlanModel {
     bool? isAlarmEnabled,
     bool? isCompleted,
     String? category,
+    String? repeatType,
   }) {
     return PlanModel(
       id: id ?? this.id,
@@ -60,7 +65,7 @@ class PlanModel {
       isAlarmEnabled: isAlarmEnabled ?? this.isAlarmEnabled,
       isCompleted: isCompleted ?? this.isCompleted,
       category: category ?? this.category,
+      repeatType: repeatType ?? this.repeatType,
     );
   }
 }
-

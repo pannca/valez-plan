@@ -23,6 +23,7 @@ class _AddPlanSheetState extends State<AddPlanSheet> {
 
   TimeOfDay _selectedTime = TimeOfDay.now();
   String _selectedCategory = 'Kerja';
+  String _repeatType = 'none'; // 'none', 'daily', 'weekdays', 'weekends'
   bool _isAlarmEnabled = true;
 
   final Map<String, ({Color color, IconData icon})> _categoryConfig = {
@@ -85,6 +86,7 @@ class _AddPlanSheetState extends State<AddPlanSheet> {
       scheduledTime: scheduledDateTime,
       isAlarmEnabled: _isAlarmEnabled,
       category: _selectedCategory,
+      repeatType: _repeatType,
     );
 
     final id = await DatabaseService.instance.insertPlan(newPlan);
@@ -306,6 +308,67 @@ class _AddPlanSheetState extends State<AddPlanSheet> {
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: isSelected ? color : textMain,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+
+            // Ulangi Jadwal (Rutinitas)
+            Text(
+              'ULANGI JADWAL',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.8,
+                color: textMuted,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ('none', 'Sekali', Icons.event_available_rounded),
+                ('daily', 'Tiap Hari', Icons.repeat_rounded),
+                ('weekdays', 'Sen - Jum', Icons.calendar_view_week_rounded),
+                ('weekends', 'Sab - Min', Icons.weekend_rounded),
+              ].map((item) {
+                final isSelected = _repeatType == item.$1;
+                return GestureDetector(
+                  onTap: () => setState(() => _repeatType = item.$1),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? const Color(0xFF388AF6).withValues(alpha: 0.2)
+                          : inputBg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected ? const Color(0xFF388AF6) : Colors.transparent,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          item.$3,
+                          size: 15,
+                          color: isSelected ? const Color(0xFF388AF6) : textMuted,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          item.$2,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: isSelected ? const Color(0xFF388AF6) : textMain,
                           ),
                         ),
                       ],
