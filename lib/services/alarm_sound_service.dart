@@ -71,16 +71,14 @@ class AlarmSoundService {
     try {
       await stopPreview();
 
-      final result = await FilePicker.platform.pickFiles(
+      final file = await FilePicker.pickFile(
         type: FileType.audio,
-        allowMultiple: false,
       );
 
-      if (result == null || result.files.isEmpty) {
+      if (file == null) {
         return false;
       }
 
-      final file = result.files.single;
       final originalPath = file.path;
       if (originalPath == null) return false;
 
@@ -164,3 +162,4 @@ class AlarmSoundService {
     _previewPlayer.dispose();
   }
 }
+
