@@ -102,6 +102,7 @@ class _RoutineTemplateSheetState extends State<RoutineTemplateSheet> {
               dateTime: plan.scheduledTime,
               title: plan.title,
               notes: plan.notes,
+              earlyReminderMinutes: plan.earlyReminderMinutes,
             );
           }
         }

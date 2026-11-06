@@ -24,6 +24,7 @@ class _AddPlanSheetState extends State<AddPlanSheet> {
   TimeOfDay _selectedTime = TimeOfDay.now();
   String _selectedCategory = 'Kerja';
   String _repeatType = 'none'; // 'none', 'daily', 'weekdays', 'weekends'
+  int _earlyReminderMinutes = 10; // 0 (tepat waktu), 5, 10, 15
   bool _isAlarmEnabled = true;
 
   final Map<String, ({Color color, IconData icon})> _categoryConfig = {
@@ -87,16 +88,18 @@ class _AddPlanSheetState extends State<AddPlanSheet> {
       isAlarmEnabled: _isAlarmEnabled,
       category: _selectedCategory,
       repeatType: _repeatType,
+      earlyReminderMinutes: _isAlarmEnabled ? _earlyReminderMinutes : 0,
     );
 
     final id = await DatabaseService.instance.insertPlan(newPlan);
 
-    if (_isAlarmEnabled && scheduledDateTime.isAfter(DateTime.now())) {
+    if (_isAlarmEnabled) {
       await AlarmService.instance.scheduleAlarm(
         id: id,
         dateTime: scheduledDateTime,
         title: title,
         notes: _notesController.text.trim(),
+        earlyReminderMinutes: _earlyReminderMinutes,
       );
     }
 
@@ -260,6 +263,62 @@ class _AddPlanSheetState extends State<AddPlanSheet> {
                 ),
               ],
             ),
+            if (_isAlarmEnabled) ...[
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  const Icon(Icons.hourglass_top_rounded, size: 14, color: Color(0xFF388AF6)),
+                  const SizedBox(width: 6),
+                  Text(
+                    'PENGINGAT PERSIAPAN',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                      color: textMuted,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  (0, 'Tepat Waktu'),
+                  (5, '5 Menit Sebelum'),
+                  (10, '10 Menit Sebelum'),
+                  (15, '15 Menit Sebelum'),
+                ].map((item) {
+                  final isSelected = _earlyReminderMinutes == item.$1;
+                  return GestureDetector(
+                    onTap: () => setState(() => _earlyReminderMinutes = item.$1),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? const Color(0xFF388AF6).withValues(alpha: 0.2)
+                            : inputBg,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isSelected ? const Color(0xFF388AF6) : Colors.transparent,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Text(
+                        item.$2,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: isSelected ? const Color(0xFF388AF6) : textMain,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
             const SizedBox(height: 16),
 
             // Kategori Chips dengan Ikon

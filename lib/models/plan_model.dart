@@ -7,6 +7,7 @@ class PlanModel {
   final bool isCompleted;
   final String category;
   final String repeatType; // 'none', 'daily', 'weekdays', 'weekends'
+  final int earlyReminderMinutes; // 0 (tepat waktu), 5, 10, 15
 
   PlanModel({
     this.id,
@@ -17,6 +18,7 @@ class PlanModel {
     this.isCompleted = false,
     this.category = 'Umum',
     this.repeatType = 'none',
+    this.earlyReminderMinutes = 0,
   });
 
   // Konversi ke Map untuk disimpan di database SQLite
@@ -30,6 +32,7 @@ class PlanModel {
       'is_completed': isCompleted ? 1 : 0,
       'category': category,
       'repeat_type': repeatType,
+      'early_reminder_minutes': earlyReminderMinutes,
     };
   }
 
@@ -44,6 +47,7 @@ class PlanModel {
       isCompleted: (map['is_completed'] as int) == 1,
       category: (map['category'] as String?) ?? 'Umum',
       repeatType: (map['repeat_type'] as String?) ?? 'none',
+      earlyReminderMinutes: (map['early_reminder_minutes'] as int?) ?? 0,
     );
   }
 
@@ -56,6 +60,7 @@ class PlanModel {
     bool? isCompleted,
     String? category,
     String? repeatType,
+    int? earlyReminderMinutes,
   }) {
     return PlanModel(
       id: id ?? this.id,
@@ -66,6 +71,7 @@ class PlanModel {
       isCompleted: isCompleted ?? this.isCompleted,
       category: category ?? this.category,
       repeatType: repeatType ?? this.repeatType,
+      earlyReminderMinutes: earlyReminderMinutes ?? this.earlyReminderMinutes,
     );
   }
 }

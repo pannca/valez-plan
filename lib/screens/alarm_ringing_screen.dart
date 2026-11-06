@@ -8,6 +8,10 @@ class AlarmRingingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isEarlyReminder = alarmSettings.id >= 100000;
+    final accentColor = isEarlyReminder ? const Color(0xFF388AF6) : const Color(0xFFFF9F0A);
+    final buttonColor = isEarlyReminder ? const Color(0xFF388AF6) : const Color(0xFFFF453A);
+
     return Scaffold(
       backgroundColor: const Color(0xFF14171A),
       body: SafeArea(
@@ -18,65 +22,88 @@ class AlarmRingingScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const Spacer(),
-              // Icon Alarm Bersih
+              // Icon Header (Hourglass untuk pengingat awal, Alarm untuk alarm utama)
               Container(
                 padding: const EdgeInsets.all(28),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Color(0xFF1E272E),
+                  color: isEarlyReminder
+                      ? const Color(0xFF388AF6).withValues(alpha: 0.15)
+                      : const Color(0xFF1E272E),
                 ),
-                child: const Icon(
-                  Icons.alarm_rounded,
+                child: Icon(
+                  isEarlyReminder ? Icons.hourglass_top_rounded : Icons.alarm_rounded,
                   size: 72,
-                  color: Color(0xFFFF9F0A),
+                  color: accentColor,
                 ),
               ),
               const SizedBox(height: 28),
+
+              // Badge Tipe Pengingat
+              if (isEarlyReminder)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF388AF6).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'PENGINGAT PERSIAPAN',
+                    style: TextStyle(
+                      color: Color(0xFF388AF6),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ),
 
               // Judul & Deskripsi Alarm
               Text(
                 alarmSettings.notificationSettings.title,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 26,
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                   letterSpacing: -0.5,
                 ),
               ),
               if (alarmSettings.notificationSettings.body.isNotEmpty) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 Text(
                   alarmSettings.notificationSettings.body,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
+                    height: 1.4,
                     color: Color(0xFF8E8E93),
                   ),
                 ),
               ],
               const Spacer(),
 
-              // Tombol Matikan Alarm Ala iOS
+              // Tombol Konfirmasi / Matikan Alarm
               SizedBox(
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF453A),
+                    backgroundColor: buttonColor,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                   ),
                   onPressed: () async {
                     await Alarm.stop(alarmSettings.id);
                     if (context.mounted) Navigator.pop(context);
                   },
-                  child: const Text(
-                    'Matikan Alarm',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                  child: Text(
+                    isEarlyReminder ? 'Siap, Mengerti!' : 'Matikan Alarm',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                 ),
               ),

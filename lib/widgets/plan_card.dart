@@ -210,33 +210,69 @@ class PlanCard extends StatelessWidget {
                           ),
                         ),
                         if (plan.isAlarmEnabled)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFF9F43)
-                                  .withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.alarm_rounded,
-                                  size: 12,
-                                  color: Color(0xFFFF9F43),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFF9F43)
+                                      .withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
                                 ),
-                                const SizedBox(width: 3),
-                                Text(
-                                  timeStr,
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFFFF9F43),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.alarm_rounded,
+                                      size: 12,
+                                      color: Color(0xFFFF9F43),
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      timeStr,
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFFFF9F43),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (plan.earlyReminderMinutes > 0) ...[
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 5, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF388AF6)
+                                        .withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.hourglass_top_rounded,
+                                        size: 10,
+                                        color: Color(0xFF388AF6),
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Text(
+                                        '-${plan.earlyReminderMinutes}m',
+                                        style: const TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF388AF6),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
-                            ),
+                            ],
                           ),
                       ],
                     ),

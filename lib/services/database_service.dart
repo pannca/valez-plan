@@ -26,7 +26,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -42,7 +42,8 @@ class DatabaseService {
         is_alarm_enabled INTEGER NOT NULL,
         is_completed INTEGER NOT NULL,
         category TEXT NOT NULL,
-        repeat_type TEXT NOT NULL DEFAULT 'none'
+        repeat_type TEXT NOT NULL DEFAULT 'none',
+        early_reminder_minutes INTEGER NOT NULL DEFAULT 0
       )
     ''');
   }
@@ -50,6 +51,9 @@ class DatabaseService {
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db.execute("ALTER TABLE plans ADD COLUMN repeat_type TEXT NOT NULL DEFAULT 'none'");
+    }
+    if (oldVersion < 3) {
+      await db.execute("ALTER TABLE plans ADD COLUMN early_reminder_minutes INTEGER NOT NULL DEFAULT 0");
     }
   }
 
@@ -157,6 +161,7 @@ class DatabaseService {
           isCompleted: false,
           category: tmpl.category,
           repeatType: tmpl.repeatType,
+          earlyReminderMinutes: tmpl.earlyReminderMinutes,
         );
 
         final newId = await db.insert('plans', newInstance.toMap());
@@ -170,6 +175,7 @@ class DatabaseService {
             dateTime: targetDateTime,
             title: tmpl.title,
             notes: tmpl.notes,
+            earlyReminderMinutes: tmpl.earlyReminderMinutes,
           );
         }
       }

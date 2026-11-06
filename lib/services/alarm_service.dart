@@ -11,39 +11,66 @@ class AlarmService {
     await Alarm.init();
   }
 
-  // Daftarkan alarm ke sistem OS HP
+  // Daftarkan alarm ke sistem OS HP (lengkap dengan opsi Pengingat Awal)
   Future<void> scheduleAlarm({
     required int id,
     required DateTime dateTime,
     required String title,
     String notes = '',
+    int earlyReminderMinutes = 0,
   }) async {
     if (kIsWeb) return;
-    // Kalau waktu jadwal sudah lewat, jangan jadwalkan alarm
-    if (dateTime.isBefore(DateTime.now())) return;
+    final now = DateTime.now();
 
-    final alarmSettings = AlarmSettings(
-      id: id,
-      dateTime: dateTime,
-      assetAudioPath: 'assets/sounds/alarm.mp3',
-      loopAudio: true,
-      vibrate: true,
-      volume: 1.0,
-      fadeDuration: 2.0,
-      notificationSettings: NotificationSettings(
-        title: '⏰ ValezPlan: $title',
-        body: notes.isNotEmpty ? notes : 'Waktunya menjalankan jadwal kamu!',
-        stopButton: 'Matikan Alarm',
-      ),
-    );
+    // 1. Jadwalkan Pengingat Awal (Early Reminder) jika diaktifkan (> 0 menit)
+    if (earlyReminderMinutes > 0) {
+      final earlyTime = dateTime.subtract(Duration(minutes: earlyReminderMinutes));
+      if (earlyTime.isAfter(now)) {
+        final earlyAlarmId = id + 100000;
+        final earlySettings = AlarmSettings(
+          id: earlyAlarmId,
+          dateTime: earlyTime,
+          assetAudioPath: 'assets/sounds/alarm.mp3',
+          loopAudio: false,
+          vibrate: true,
+          volume: 0.6,
+          fadeDuration: 1.0,
+          notificationSettings: NotificationSettings(
+            title: '⏳ $earlyReminderMinutes Menit Lagi: $title',
+            body: 'Jadwal dimulai pukul ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}. Siapkan dirimu!',
+            stopButton: 'Mengerti',
+          ),
+        );
+        await Alarm.set(alarmSettings: earlySettings);
+      }
+    }
 
-    await Alarm.set(alarmSettings: alarmSettings);
+    // 2. Jadwalkan Alarm Utama Tepat Waktu
+    if (dateTime.isAfter(now)) {
+      final alarmSettings = AlarmSettings(
+        id: id,
+        dateTime: dateTime,
+        assetAudioPath: 'assets/sounds/alarm.mp3',
+        loopAudio: true,
+        vibrate: true,
+        volume: 1.0,
+        fadeDuration: 2.0,
+        notificationSettings: NotificationSettings(
+          title: '⏰ ValezPlan: $title',
+          body: notes.isNotEmpty ? notes : 'Waktunya menjalankan jadwal kamu!',
+          stopButton: 'Matikan Alarm',
+        ),
+      );
+
+      await Alarm.set(alarmSettings: alarmSettings);
+    }
   }
 
-  // Batalkan alarm
+  // Batalkan alarm utama dan pengingat awal
   Future<void> cancelAlarm(int id) async {
     if (kIsWeb) return;
     await Alarm.stop(id);
+    await Alarm.stop(id + 100000);
   }
 
   // Cek apakah alarm dengan ID tertentu sedang berdering
