@@ -20,23 +20,6 @@ class PlanCard extends StatelessWidget {
     this.isLast = false,
   });
 
-  Color _getCategoryColor(String category) {
-    switch (category.toLowerCase()) {
-      case 'kerja':
-        return const Color(0xFF388AF6); // Structured Blue
-      case 'belajar':
-        return const Color(0xFFA259FF); // Structured Purple
-      case 'ibadah':
-        return const Color(0xFF1DD1A1); // Structured Mint
-      case 'istirahat':
-        return const Color(0xFFFF9F43); // Structured Orange
-      case 'santai':
-        return const Color(0xFFFF5252); // Structured Red
-      default:
-        return const Color(0xFF54A0FF);
-    }
-  }
-
   IconData _getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
       case 'kerja':
@@ -82,24 +65,22 @@ class PlanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final timeStr = DateFormat('HH:mm').format(plan.scheduledTime);
-    final categoryColor = _getCategoryColor(plan.category);
     final categoryIcon = _getCategoryIcon(plan.category);
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark
         ? (plan.isCompleted
-            ? const Color(0xFF14171A).withValues(alpha: 0.7)
+            ? const Color(0xFF14171A).withValues(alpha: 0.6)
             : const Color(0xFF1E272E))
         : (plan.isCompleted
-            ? const Color(0xFFF1F2F6)
+            ? const Color(0xFFF8FAFC)
             : Colors.white);
+
+    // Border netral profesional yang tenang dan konsisten
     final borderColor = isDark
-        ? (plan.isCompleted
-            ? Colors.white.withValues(alpha: 0.04)
-            : categoryColor.withValues(alpha: 0.25))
-        : (plan.isCompleted
-            ? const Color(0xFFE2E8F0)
-            : categoryColor.withValues(alpha: 0.35));
+        ? const Color(0xFF2D3436)
+        : const Color(0xFFE2E8F0);
+
     final textMain = isDark
         ? (plan.isCompleted ? const Color(0xFF636E72) : Colors.white)
         : (plan.isCompleted ? const Color(0xFFA0AEC0) : const Color(0xFF2D3748));
@@ -120,11 +101,11 @@ class PlanCard extends StatelessWidget {
         padding: const EdgeInsets.only(right: 24),
         margin: const EdgeInsets.only(left: 60, top: 4, bottom: 4),
         decoration: BoxDecoration(
-          color: Colors.red.shade900.withValues(alpha: 0.4),
+          color: const Color(0xFFFF5252).withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(16),
         ),
         child: const Icon(Icons.delete_outline_rounded,
-            color: Colors.redAccent, size: 26),
+            color: Color(0xFFFF5252), size: 24),
       ),
       onDismissed: (_) => onDelete(),
       child: IntrinsicHeight(
@@ -166,32 +147,32 @@ class PlanCard extends StatelessWidget {
                     ),
                   ),
 
-                  // Node Tombol Ceklis / Ikon Kategori
+                  // Node Tombol Ceklis
                   GestureDetector(
                     onTap: () => onToggleComplete(!plan.isCompleted),
                     behavior: HitTestBehavior.opaque,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      width: 32,
-                      height: 32,
+                      width: 30,
+                      height: 30,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: plan.isCompleted
-                            ? const Color(0xFF1DD1A1)
+                            ? const Color(0xFF388AF6)
                             : nodeBg,
                         border: Border.all(
                           color: plan.isCompleted
-                              ? const Color(0xFF1DD1A1)
-                              : categoryColor,
-                          width: 2,
+                              ? const Color(0xFF388AF6)
+                              : (isDark ? const Color(0xFF3A444C) : const Color(0xFFCBD5E0)),
+                          width: 1.5,
                         ),
                       ),
                       child: Icon(
                         plan.isCompleted ? Icons.check_rounded : categoryIcon,
-                        size: 16,
+                        size: 15,
                         color: plan.isCompleted
-                            ? Colors.black
-                            : categoryColor,
+                            ? Colors.white
+                            : (isDark ? const Color(0xFF808E9B) : const Color(0xFF718096)),
                       ),
                     ),
                   ),
@@ -200,7 +181,7 @@ class PlanCard extends StatelessWidget {
             ),
             const SizedBox(width: 12),
 
-            // Kolom 3: Kartu Agenda ala Structured
+            // Kolom 3: Kartu Agenda Minimalis Profesional
             Expanded(
               child: InkWell(
                 onTap: onEdit,
@@ -218,212 +199,166 @@ class PlanCard extends StatelessWidget {
                     ),
                   ),
                   child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Baris Atas: Judul & Alarm Pill
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            plan.title,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: textMain,
-                              decoration: plan.isCompleted
-                                  ? TextDecoration.lineThrough
-                                  : TextDecoration.none,
-                              decorationColor: isDark ? const Color(0xFF636E72) : const Color(0xFFA0AEC0),
-                              decorationThickness: 1.5,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Baris Atas: Judul & Kapsul Alarm Minimalis
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              plan.title,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: textMain,
+                                decoration: plan.isCompleted
+                                    ? TextDecoration.lineThrough
+                                    : TextDecoration.none,
+                                decorationColor: isDark ? const Color(0xFF636E72) : const Color(0xFFA0AEC0),
+                                decorationThickness: 1.5,
+                              ),
                             ),
                           ),
-                        ),
-                        if (plan.isAlarmEnabled)
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFF9F43)
-                                      .withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(6),
+                          // Kapsul Alarm Monokrom Sleek (Satu kapsul untuk jam & countdown)
+                          if (plan.isAlarmEnabled)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF242C34) : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: isDark ? const Color(0xFF2D3436) : const Color(0xFFE2E8F0),
+                                  width: 1,
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.alarm_rounded,
-                                      size: 12,
-                                      color: Color(0xFFFF9F43),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.alarm_rounded,
+                                    size: 11,
+                                    color: textNotes,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    timeStr,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: isDark ? Colors.white70 : const Color(0xFF2D3748),
                                     ),
-                                    const SizedBox(width: 3),
+                                  ),
+                                  if (!plan.isCompleted) ...[
+                                    const SizedBox(width: 4),
                                     Text(
-                                      timeStr,
+                                      '•',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: textNotes,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      _getTimeRemainingText(plan.scheduledTime),
                                       style: const TextStyle(
                                         fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFFFF9F43),
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF388AF6),
                                       ),
                                     ),
                                   ],
-                                ),
+                                  if (plan.earlyReminderMinutes > 0) ...[
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '•',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: textNotes,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '-${plan.earlyReminderMinutes}m',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: textNotes,
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
-                              // Badge Countdown Hitung Mundur Sisa Waktu
-                              if (!plan.isCompleted) ...[
-                                const SizedBox(width: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 5, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF388AF6)
-                                        .withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(
-                                        Icons.timer_outlined,
-                                        size: 10,
-                                        color: Color(0xFF388AF6),
-                                      ),
-                                      const SizedBox(width: 2),
-                                      Text(
-                                        _getTimeRemainingText(plan.scheduledTime),
-                                        style: const TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF388AF6),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                              // Badge Pengingat Persiapan
-                              if (plan.earlyReminderMinutes > 0) ...[
-                                const SizedBox(width: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 5, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFA259FF)
-                                        .withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(
-                                        Icons.notifications_active_outlined,
-                                        size: 10,
-                                        color: Color(0xFFA259FF),
-                                      ),
-                                      const SizedBox(width: 2),
-                                      Text(
-                                        'Siap -${plan.earlyReminderMinutes}m',
-                                        style: const TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFFA259FF),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                      ],
-                    ),
-
-                    // Catatan
-                    if (plan.notes.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        plan.notes,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: textNotes,
-                        ),
+                            ),
+                        ],
                       ),
-                    ],
 
-                    const SizedBox(height: 8),
-
-                    // Badge Kategori Minimalis & Repeat Pill
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: categoryColor.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
+                      // Catatan Tambahan jika ada
+                      if (plan.notes.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          plan.notes,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: textNotes,
                           ),
-                          child: Text(
+                        ),
+                      ],
+
+                      const SizedBox(height: 8),
+
+                      // Baris Bawah: Kategori & Repeat Ringkas Bersih
+                      Row(
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Color(0xFF388AF6),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
                             plan.category.toUpperCase(),
                             style: TextStyle(
-                              fontSize: 9,
+                              fontSize: 10,
                               fontWeight: FontWeight.w800,
-                              letterSpacing: 0.8,
-                              color: categoryColor,
+                              letterSpacing: 0.5,
+                              color: textNotes,
                             ),
                           ),
-                        ),
-                        if (plan.repeatType != 'none') ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF388AF6).withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
+                          if (plan.repeatType != 'none') ...[
+                            const SizedBox(width: 8),
+                            Text('•', style: TextStyle(fontSize: 10, color: textNotes)),
+                            const SizedBox(width: 8),
+                            Text(
+                              plan.repeatType == 'daily'
+                                  ? 'Tiap Hari'
+                                  : (plan.repeatType == 'weekdays' ? 'Sen-Jum' : 'Sab-Min'),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: textNotes,
+                              ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.repeat_rounded,
-                                  size: 10,
-                                  color: Color(0xFF388AF6),
-                                ),
-                                const SizedBox(width: 3),
-                                Text(
-                                  plan.repeatType == 'daily'
-                                      ? 'Tiap Hari'
-                                      : (plan.repeatType == 'weekdays'
-                                          ? 'Sen-Jum'
-                                          : 'Sab-Min'),
-                                  style: const TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF388AF6),
-                                  ),
-                                ),
-                              ],
+                          ],
+                          const Spacer(),
+                          if (onEdit != null)
+                            Icon(
+                              Icons.edit_outlined,
+                              size: 13,
+                              color: textNotes.withValues(alpha: 0.5),
                             ),
-                          ),
                         ],
-                        const Spacer(),
-                        if (onEdit != null)
-                          Icon(
-                            Icons.edit_outlined,
-                            size: 13,
-                            color: textNotes.withValues(alpha: 0.7),
-                          ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
           ],
         ),
       ),

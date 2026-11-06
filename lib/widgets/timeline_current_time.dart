@@ -33,6 +33,8 @@ class _TimelineCurrentTimeIndicatorState
   @override
   Widget build(BuildContext context) {
     final timeStr = DateFormat('HH:mm').format(_now);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const accentColor = Color(0xFF388AF6); // Valez Blue yang selaras dan profesional
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -46,30 +48,30 @@ class _TimelineCurrentTimeIndicatorState
               textAlign: TextAlign.right,
               style: const TextStyle(
                 fontSize: 12,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFFFF5252),
+                fontWeight: FontWeight.w800,
+                color: accentColor,
                 fontFamily: 'monospace',
               ),
             ),
           ),
           const SizedBox(width: 12),
 
-          // Titik Merah Indikator Waktu
+          // Titik Indikator Waktu
           Container(
-            width: 10,
-            height: 10,
+            width: 8,
+            height: 8,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              color: Color(0xFFFF5252),
+              color: accentColor,
             ),
           ),
           const SizedBox(width: 6),
 
-          // Garis Merah Penunjuk Jam Sekarang
+          // Garis Penunjuk Jam Sekarang
           Expanded(
             child: Container(
               height: 1.5,
-              color: const Color(0xFFFF5252),
+              color: accentColor.withValues(alpha: isDark ? 0.4 : 0.6),
             ),
           ),
           const SizedBox(width: 8),
@@ -77,9 +79,9 @@ class _TimelineCurrentTimeIndicatorState
             'SEKARANG',
             style: TextStyle(
               fontSize: 9,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.0,
-              color: Color(0xFFFF5252),
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.8,
+              color: accentColor,
             ),
           ),
         ],
@@ -87,4 +89,3 @@ class _TimelineCurrentTimeIndicatorState
     );
   }
 }
-

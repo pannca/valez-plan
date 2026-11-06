@@ -401,7 +401,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 const SizedBox(width: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 7),
+                                      horizontal: 10, vertical: 7),
                                   decoration: BoxDecoration(
                                     color: cardBg,
                                     borderRadius: BorderRadius.circular(12),
@@ -409,13 +409,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                       color: borderColor,
                                     ),
                                   ),
-                                  child: Text(
-                                    '$completedCount / ${_plans.length}',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w800,
-                                      color: Color(0xFF1DD1A1),
-                                    ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        completedCount == _plans.length
+                                            ? Icons.check_circle_rounded
+                                            : Icons.task_alt_rounded,
+                                        size: 13,
+                                        color: const Color(0xFF388AF6),
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        '$completedCount / ${_plans.length}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w800,
+                                          color: textMain,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
