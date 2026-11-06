@@ -39,24 +39,108 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
+  // Palet Warna Profesional & Terarah (Tidak Terlalu Ramai)
   Color _getCategoryColor(String category) {
     switch (category.toLowerCase()) {
       case 'kerja':
-        return const Color(0xFF388AF6);
+        return const Color(0xFF388AF6); // Valez Blue
       case 'belajar':
-        return const Color(0xFFA259FF);
+        return const Color(0xFF818CF8); // Indigo Soft
       case 'ibadah':
-        return const Color(0xFF1DD1A1);
+        return const Color(0xFF1DD1A1); // Mint Clean
       case 'istirahat':
-        return const Color(0xFFFF9F43);
       case 'santai':
-        return const Color(0xFFFF5252);
+        return const Color(0xFFFF9F43); // Soft Amber
       default:
-        return const Color(0xFF54A0FF);
+        return const Color(0xFF64748B); // Slate Neutral
     }
   }
 
-  // Mengelompokkan riwayat berdasarkan tanggal (Hari Ini, Kemarin, dst)
+  // 1. Hitung Streak (Berapa hari berturut-turut disiplin menyelesaikan agenda)
+  int _calculateStreak() {
+    if (_historyPlans.isEmpty) return 0;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final completedDays = <DateTime>{};
+    for (var plan in _historyPlans) {
+      if (plan.isCompleted) {
+        completedDays.add(DateTime(
+          plan.scheduledTime.year,
+          plan.scheduledTime.month,
+          plan.scheduledTime.day,
+        ));
+      }
+    }
+
+    if (completedDays.isEmpty) return 0;
+
+    int streak = 0;
+    DateTime checkDate = today;
+
+    // Jika hari ini belum ada agenda selesai, periksa dari kemarin
+    if (!completedDays.contains(checkDate)) {
+      checkDate = today.subtract(const Duration(days: 1));
+    }
+
+    while (completedDays.contains(checkDate)) {
+      streak++;
+      checkDate = checkDate.subtract(const Duration(days: 1));
+    }
+
+    return streak;
+  }
+
+  // 2. Data 7 Hari Terakhir untuk Mini Activity Bar Chart
+  List<({String dayLabel, int completed, int total, bool isToday})> _getWeeklyData() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final List<({String dayLabel, int completed, int total, bool isToday})> result = [];
+
+    final dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+
+    for (int i = 6; i >= 0; i--) {
+      final date = today.subtract(Duration(days: i));
+      final dayPlans = _historyPlans.where((p) {
+        final pDate = DateTime(p.scheduledTime.year, p.scheduledTime.month, p.scheduledTime.day);
+        return pDate.isAtSameMomentAs(date);
+      }).toList();
+
+      final completed = dayPlans.where((p) => p.isCompleted).length;
+      final total = dayPlans.length;
+      final dayLabel = dayNames[date.weekday % 7];
+
+      result.add((
+        dayLabel: dayLabel,
+        completed: completed,
+        total: total,
+        isToday: i == 0,
+      ));
+    }
+
+    return result;
+  }
+
+  // 3. Distribusi Kategori Agenda yang Selesai
+  Map<String, double> _getCategoryDistribution() {
+    final completedPlans = _historyPlans.where((p) => p.isCompleted).toList();
+    if (completedPlans.isEmpty) return {};
+
+    final Map<String, int> counts = {};
+    for (var plan in completedPlans) {
+      counts[plan.category] = (counts[plan.category] ?? 0) + 1;
+    }
+
+    final Map<String, double> distribution = {};
+    counts.forEach((cat, count) {
+      distribution[cat] = count / completedPlans.length;
+    });
+
+    return distribution;
+  }
+
+  // Mengelompokkan riwayat berdasarkan tanggal
   Map<String, List<PlanModel>> _groupPlansByDate(List<PlanModel> plans) {
     final Map<String, List<PlanModel>> grouped = {};
     final now = DateTime.now();
@@ -84,7 +168,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return grouped;
   }
 
-  // Dialog konfirmasi hapus 1 jadwal dari riwayat
+  // Dialog konfirmasi hapus 1 jadwal
   Future<bool> _confirmDeletePlan(PlanModel plan) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final confirmed = await showDialog<bool>(
@@ -94,14 +178,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            const Icon(Icons.delete_outline_rounded, color: Color(0xFFFF5252), size: 24),
+            const Icon(Icons.delete_outline_rounded, color: Color(0xFFFF5252), size: 22),
             const SizedBox(width: 8),
             Text(
               'Hapus dari Riwayat?',
               style: TextStyle(
                 color: isDark ? Colors.white : const Color(0xFF2D3748),
                 fontWeight: FontWeight.w800,
-                fontSize: 18,
+                fontSize: 17,
               ),
             ),
           ],
@@ -110,7 +194,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           'Jadwal "${plan.title}" akan dihapus permanen dari riwayat kamu.',
           style: TextStyle(
             color: isDark ? const Color(0xFFBDC3C7) : const Color(0xFF718096),
-            fontSize: 14,
+            fontSize: 13,
           ),
         ),
         actions: [
@@ -132,7 +216,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Hapus', style: TextStyle(fontWeight: FontWeight.w800)),
+            child: const Text('Hapus', style: TextStyle(fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -156,7 +240,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return false;
   }
 
-  // Opsi Kelola / Bersihkan Riwayat (Hanya jika user memang mau menghapus)
+  // Opsi Kelola / Bersihkan Riwayat
   void _showClearHistoryOptions() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF1E272E) : Colors.white;
@@ -178,7 +262,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             children: [
               Center(
                 child: Container(
-                  width: 40,
+                  width: 36,
                   height: 4,
                   decoration: BoxDecoration(
                     color: isDark ? const Color(0xFF485460) : const Color(0xFFCBD5E0),
@@ -195,37 +279,35 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   color: textMain,
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(
-                'Riwayat kamu aman tersimpan permanen di HP. Pilih opsi jika ingin membersihkannya:',
-                style: TextStyle(fontSize: 13, color: textMuted),
+                'Data tersimpan permanen di HP kamu. Pilih jika ingin dibersihkan:',
+                style: TextStyle(fontSize: 12, color: textMuted),
               ),
-              const SizedBox(height: 18),
-
-              // Opsi 1: Bersihkan Riwayat Selesai
+              const SizedBox(height: 16),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1DD1A1).withValues(alpha: 0.15),
+                    color: const Color(0xFF1DD1A1).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.cleaning_services_rounded, color: Color(0xFF1DD1A1)),
+                  child: const Icon(Icons.cleaning_services_rounded, color: Color(0xFF1DD1A1), size: 20),
                 ),
                 title: Text(
-                  'Hapus Riwayat yang Sudah Selesai',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: textMain),
+                  'Hapus Riwayat yang Selesai',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: textMain),
                 ),
                 subtitle: Text(
-                  'Hanya menghapus agenda dengan status checklist selesai',
+                  'Hanya membersihkan agenda yang sudah dicentang selesai',
                   style: TextStyle(fontSize: 12, color: textMuted),
                 ),
                 onTap: () async {
                   Navigator.pop(ctx);
                   final ok = await _showFinalConfirmDialog(
                     title: 'Hapus Riwayat Selesai?',
-                    message: 'Semua agenda riwayat yang telah selesai akan dibersihkan.',
+                    message: 'Agenda yang telah selesai akan dibersihkan dari riwayat.',
                   );
                   if (ok) {
                     await DatabaseService.instance.deleteCompletedHistory();
@@ -233,32 +315,30 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   }
                 },
               ),
-              const Divider(height: 20),
-
-              // Opsi 2: Bersihkan Seluruh Riwayat
+              const Divider(height: 16),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFF5252).withValues(alpha: 0.15),
+                    color: const Color(0xFFFF5252).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.delete_forever_rounded, color: Color(0xFFFF5252)),
+                  child: const Icon(Icons.delete_forever_rounded, color: Color(0xFFFF5252), size: 20),
                 ),
                 title: const Text(
                   'Bersihkan Seluruh Riwayat',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFFFF5252)),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFFFF5252)),
                 ),
                 subtitle: Text(
-                  'Menghapus semua arsip riwayat masa lalu secara permanen',
+                  'Mengosongkan arsip riwayat masa lalu (jadwal masa depan tetap aman)',
                   style: TextStyle(fontSize: 12, color: textMuted),
                 ),
                 onTap: () async {
                   Navigator.pop(ctx);
                   final ok = await _showFinalConfirmDialog(
                     title: 'Bersihkan Seluruh Riwayat?',
-                    message: 'Apakah kamu yakin ingin mengosongkan semua riwayat kegiatan? Agenda di timeline masa depan tidak akan terpengaruh.',
+                    message: 'Apakah kamu yakin ingin mengosongkan riwayat kegiatan lampau?',
                   );
                   if (ok) {
                     await DatabaseService.instance.clearAllHistory();
@@ -285,13 +365,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
           style: TextStyle(
             color: isDark ? Colors.white : const Color(0xFF2D3748),
             fontWeight: FontWeight.w800,
+            fontSize: 17,
           ),
         ),
         content: Text(
           message,
           style: TextStyle(
             color: isDark ? const Color(0xFFBDC3C7) : const Color(0xFF718096),
-            fontSize: 14,
+            fontSize: 13,
           ),
         ),
         actions: [
@@ -320,11 +401,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final cardBg = isDark ? const Color(0xFF1E272E) : Colors.white;
     final textMuted = isDark ? const Color(0xFF808E9B) : const Color(0xFF718096);
     final textMain = isDark ? Colors.white : const Color(0xFF2D3748);
+    final borderColor = isDark ? const Color(0xFF2D3436) : const Color(0xFFE2E8F0);
 
     final completedCount = _historyPlans.where((p) => p.isCompleted).length;
     final totalCount = _historyPlans.length;
     final completionRate =
         totalCount == 0 ? 0 : ((completedCount / totalCount) * 100).toInt();
+
+    final streak = _calculateStreak();
+    final weeklyData = _getWeeklyData();
+    final categoryDist = _getCategoryDistribution();
 
     List<PlanModel> filteredPlans;
     if (_activeFilter == 'SELESAI') {
@@ -367,34 +453,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Riwayat Kegiatan',
+                                  'Performa & Riwayat',
                                   style: TextStyle(
-                                    fontSize: 28,
+                                    fontSize: 26,
                                     fontWeight: FontWeight.w900,
                                     color: textMain,
                                     letterSpacing: -0.5,
                                   ),
                                 ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.lock_outline_rounded,
-                                      size: 13,
-                                      color: Color(0xFF1DD1A1),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Expanded(
-                                      child: Text(
-                                        'Tersimpan aman permanen di HP kamu',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: textMuted,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Konsistensi disiplin & catatan agenda harian',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: textMuted,
+                                  ),
                                 ),
                               ],
                             ),
@@ -404,9 +478,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               decoration: BoxDecoration(
                                 color: cardBg,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isDark ? const Color(0xFF2D3436) : const Color(0xFFE2E8F0),
-                                ),
+                                border: Border.all(color: borderColor),
                               ),
                               child: IconButton(
                                 icon: const Icon(Icons.delete_sweep_rounded, size: 20),
@@ -417,112 +489,264 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             ),
                         ],
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 16),
 
-                      // Kartu Statistik Ringkasan
+                      // === KARTU 1: STREAK & KONSISTENSI (HERO METRIC) ===
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(18),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: cardBg,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: isDark
-                                ? const Color(0xFF2D3436)
-                                : const Color(0xFFE2E8F0),
-                          ),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: borderColor),
                         ),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            _buildStatItem(
-                              'TOTAL AGENDA',
-                              totalCount.toString(),
-                              const Color(0xFF388AF6),
-                              textMuted,
-                            ),
+                            // Badge Streak Api Bersih
                             Container(
-                              height: 36,
-                              width: 1,
-                              color: isDark
-                                  ? const Color(0xFF2D3436)
-                                  : const Color(0xFFE2E8F0),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF9F43).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.local_fire_department_rounded,
+                                          color: Color(0xFFFF9F43), size: 22),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '$streak',
+                                        style: const TextStyle(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.w900,
+                                          color: Color(0xFFFF9F43),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  const Text(
+                                    'HARI STREAK',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.5,
+                                      color: Color(0xFFFF9F43),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                            _buildStatItem(
-                              'SELESAI',
-                              completedCount.toString(),
-                              const Color(0xFF1DD1A1),
-                              textMuted,
-                            ),
-                            Container(
-                              height: 36,
-                              width: 1,
-                              color: isDark
-                                  ? const Color(0xFF2D3436)
-                                  : const Color(0xFFE2E8F0),
-                            ),
-                            _buildStatItem(
-                              'DISIPLIN',
-                              '$completionRate%',
-                              const Color(0xFFFF9F43),
-                              textMuted,
+                            const SizedBox(width: 16),
+
+                            // Ringkasan Dua Metrik Utama
+                            Expanded(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: [
+                                  _buildSimpleMetric(
+                                    'SELESAI',
+                                    '$completedCount / $totalCount',
+                                    const Color(0xFF1DD1A1),
+                                    textMuted,
+                                  ),
+                                  Container(
+                                    height: 32,
+                                    width: 1,
+                                    color: borderColor,
+                                  ),
+                                  _buildSimpleMetric(
+                                    'DISIPLIN',
+                                    '$completionRate%',
+                                    const Color(0xFF388AF6),
+                                    textMuted,
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 12),
+
+                      // === KARTU 2: AKTIVITAS 7 HARI TERAKHIR (MINI BAR CHART) ===
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: borderColor),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'AKTIVITAS 7 HARI',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.8,
+                                    color: textMuted,
+                                  ),
+                                ),
+                                Text(
+                                  weeklyData.last.isToday
+                                      ? 'Hari Ini: ${weeklyData.last.completed} Selesai'
+                                      : '',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF388AF6),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Bar Chart Row
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: weeklyData.map((d) {
+                                return _buildDayBar(
+                                  dayLabel: d.dayLabel,
+                                  completed: d.completed,
+                                  isToday: d.isToday,
+                                  isDark: isDark,
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // === KARTU 3: DISTRIBUSI FOKUS KATEGORI ===
+                      if (categoryDist.isNotEmpty) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: cardBg,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: borderColor),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'DISTRIBUSI FOKUS KEGIATAN',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.8,
+                                  color: textMuted,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Progress Bar Segmental Bersih
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: SizedBox(
+                                  height: 8,
+                                  child: Row(
+                                    children: categoryDist.entries.map((e) {
+                                      return Expanded(
+                                        flex: (e.value * 100).toInt().clamp(1, 100),
+                                        child: Container(
+                                          color: _getCategoryColor(e.key),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+
+                              // Legend Kategori Minimalis
+                              Wrap(
+                                spacing: 14,
+                                runSpacing: 6,
+                                children: categoryDist.entries.map((e) {
+                                  final pct = (e.value * 100).toInt();
+                                  final col = _getCategoryColor(e.key);
+                                  return Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: col,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        '${e.key} $pct%',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: textMain,
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
 
                       // Filter Pills
                       Row(
                         children: [
                           _buildFilterChip('SEMUA', 'Semua ($totalCount)'),
                           const SizedBox(width: 8),
-                          _buildFilterChip(
-                              'SELESAI', 'Selesai ($completedCount)'),
+                          _buildFilterChip('SELESAI', 'Selesai ($completedCount)'),
                           const SizedBox(width: 8),
-                          _buildFilterChip('TERLEWAT',
-                              'Terlewat (${totalCount - completedCount})'),
+                          _buildFilterChip('TERLEWAT', 'Terlewat (${totalCount - completedCount})'),
                         ],
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 14),
 
                       // Daftar Riwayat Terkelompok
                       if (_historyPlans.isEmpty)
                         Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 80),
+                          padding: const EdgeInsets.symmetric(vertical: 50),
                           child: Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: cardBg,
-                                  ),
-                                  child: Icon(
-                                    Icons.history_toggle_off_rounded,
-                                    size: 48,
-                                    color: textMuted,
-                                  ),
+                                Icon(
+                                  Icons.history_toggle_off_rounded,
+                                  size: 44,
+                                  color: textMuted.withValues(alpha: 0.5),
                                 ),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 12),
                                 Text(
                                   'Belum Ada Riwayat',
                                   style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 15,
                                     fontWeight: FontWeight.w700,
                                     color: textMain,
                                   ),
                                 ),
-                                const SizedBox(height: 6),
+                                const SizedBox(height: 4),
                                 Text(
-                                  'Jadwal yang sudah selesai atau terlewat akan langsung muncul di sini',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: textMuted,
-                                  ),
+                                  'Agenda yang selesai langsung terekap di sini',
+                                  style: TextStyle(fontSize: 12, color: textMuted),
                                 ),
                               ],
                             ),
@@ -536,14 +760,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Header Tanggal (Hari Ini, Kemarin, dst)
+                              // Header Tanggal
                               Padding(
-                                padding:
-                                    const EdgeInsets.only(left: 4, bottom: 8, top: 12),
+                                padding: const EdgeInsets.only(left: 4, bottom: 8, top: 10),
                                 child: Text(
                                   dateTitle.toUpperCase(),
                                   style: TextStyle(
-                                    fontSize: 11,
+                                    fontSize: 10,
                                     fontWeight: FontWeight.w800,
                                     letterSpacing: 0.8,
                                     color: textMuted,
@@ -553,13 +776,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                               // Item-item kegiatan pada tanggal tersebut
                               ...plansOnDate.map((plan) {
-                                final timeStr = DateFormat('HH:mm')
-                                    .format(plan.scheduledTime);
-                                final categoryColor =
-                                    _getCategoryColor(plan.category);
+                                final timeStr = DateFormat('HH:mm').format(plan.scheduledTime);
+                                final categoryColor = _getCategoryColor(plan.category);
 
                                 return Dismissible(
-                                  key: Key('history_${plan.id}_${plan.scheduledTime.millisecondsSinceEpoch}'),
+                                  key: Key('hist_${plan.id}_${plan.scheduledTime.millisecondsSinceEpoch}'),
                                   direction: DismissDirection.endToStart,
                                   confirmDismiss: (_) => _confirmDeletePlan(plan),
                                   background: Container(
@@ -567,81 +788,57 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                     alignment: Alignment.centerRight,
                                     padding: const EdgeInsets.only(right: 20),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFFF5252).withValues(alpha: 0.8),
-                                      borderRadius: BorderRadius.circular(16),
+                                      color: const Color(0xFFFF5252).withValues(alpha: 0.85),
+                                      borderRadius: BorderRadius.circular(14),
                                     ),
-                                    child: const Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        Text(
-                                          'Hapus',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                        SizedBox(width: 8),
-                                        Icon(Icons.delete_outline_rounded, color: Colors.white, size: 22),
-                                      ],
-                                    ),
+                                    child: const Icon(Icons.delete_outline_rounded,
+                                        color: Colors.white, size: 22),
                                   ),
                                   child: Container(
                                     margin: const EdgeInsets.only(bottom: 8),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 12),
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                                     decoration: BoxDecoration(
                                       color: cardBg,
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(
-                                        color: isDark
-                                            ? const Color(0xFF2D3436)
-                                            : const Color(0xFFE2E8F0),
-                                      ),
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(color: borderColor),
                                     ),
                                     child: Row(
                                       children: [
-                                        // Status Icon Bulat
+                                        // Status Bulat Bersih
                                         Container(
-                                          width: 32,
-                                          height: 32,
+                                          width: 26,
+                                          height: 26,
                                           decoration: BoxDecoration(
                                             shape: BoxShape.circle,
                                             color: plan.isCompleted
-                                                ? const Color(0xFF1DD1A1)
-                                                    .withValues(alpha: 0.15)
-                                                : const Color(0xFFFF5252)
-                                                    .withValues(alpha: 0.15),
+                                                ? const Color(0xFF1DD1A1).withValues(alpha: 0.15)
+                                                : const Color(0xFFFF5252).withValues(alpha: 0.12),
                                           ),
                                           child: Icon(
-                                            plan.isCompleted
-                                                ? Icons.check_rounded
-                                                : Icons.close_rounded,
-                                            size: 18,
+                                            plan.isCompleted ? Icons.check_rounded : Icons.close_rounded,
+                                            size: 15,
                                             color: plan.isCompleted
                                                 ? const Color(0xFF1DD1A1)
                                                 : const Color(0xFFFF5252),
                                           ),
                                         ),
-                                        const SizedBox(width: 14),
+                                        const SizedBox(width: 12),
 
                                         // Judul & Catatan
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 plan.title,
                                                 style: TextStyle(
-                                                  fontSize: 15,
+                                                  fontSize: 14,
                                                   fontWeight: FontWeight.w700,
-                                                  color: plan.isCompleted
-                                                      ? textMain
-                                                      : textMuted,
+                                                  color: plan.isCompleted ? textMain : textMuted,
                                                   decoration: plan.isCompleted
                                                       ? TextDecoration.none
                                                       : TextDecoration.lineThrough,
+                                                  decorationColor: textMuted,
                                                 ),
                                               ),
                                               if (plan.notes.isNotEmpty) ...[
@@ -651,7 +848,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                                   maxLines: 1,
                                                   overflow: TextOverflow.ellipsis,
                                                   style: TextStyle(
-                                                    fontSize: 12,
+                                                    fontSize: 11,
                                                     color: textMuted,
                                                   ),
                                                 ),
@@ -662,34 +859,29 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                                         // Waktu & Kategori
                                         Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.end,
+                                          crossAxisAlignment: CrossAxisAlignment.end,
                                           children: [
                                             Text(
                                               timeStr,
                                               style: TextStyle(
-                                                fontSize: 13,
+                                                fontSize: 12,
                                                 fontWeight: FontWeight.w700,
                                                 fontFamily: 'monospace',
                                                 color: textMain,
                                               ),
                                             ),
-                                            const SizedBox(height: 4),
+                                            const SizedBox(height: 3),
                                             Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                  horizontal: 6, vertical: 2),
+                                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                                               decoration: BoxDecoration(
-                                                color: categoryColor
-                                                    .withValues(alpha: 0.15),
-                                                borderRadius:
-                                                    BorderRadius.circular(6),
+                                                color: categoryColor.withValues(alpha: 0.12),
+                                                borderRadius: BorderRadius.circular(4),
                                               ),
                                               child: Text(
                                                 plan.category.toUpperCase(),
                                                 style: TextStyle(
                                                   fontSize: 8,
                                                   fontWeight: FontWeight.w800,
-                                                  letterSpacing: 0.5,
                                                   color: categoryColor,
                                                 ),
                                               ),
@@ -700,8 +892,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                                         // Tombol Hapus Manual
                                         IconButton(
-                                          icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                                          color: textMuted.withValues(alpha: 0.5),
+                                          icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                                          color: textMuted.withValues(alpha: 0.4),
                                           padding: EdgeInsets.zero,
                                           constraints: const BoxConstraints(),
                                           tooltip: 'Hapus Item',
@@ -715,7 +907,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             ],
                           );
                         }),
-                        const SizedBox(height: 40),
+                        const SizedBox(height: 30),
                       ],
                     ],
                   ),
@@ -725,14 +917,80 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _buildStatItem(
-      String label, String value, Color color, Color textMuted) {
+  // Komponen Batang Harian Bar Chart
+  Widget _buildDayBar({
+    required String dayLabel,
+    required int completed,
+    required bool isToday,
+    required bool isDark,
+  }) {
+    final double maxBarHeight = 44.0;
+    // Tinggi batang menyesuaikan jumlah agenda selesai (maksimal 5 agenda dianggap penuh)
+    final double fillHeight = completed == 0
+        ? 4.0
+        : (completed / 5.0 * maxBarHeight).clamp(8.0, maxBarHeight);
+
+    final barColor = isToday
+        ? const Color(0xFF388AF6) // Biru hari ini
+        : (completed > 0 ? const Color(0xFF1DD1A1) : (isDark ? const Color(0xFF2D3436) : const Color(0xFFE2E8F0)));
+
     return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Angka selesai di atas batang
+        Text(
+          completed > 0 ? '$completed' : '',
+          style: TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.w800,
+            color: barColor,
+          ),
+        ),
+        const SizedBox(height: 4),
+
+        // Track Batang Vertikal
+        Container(
+          width: 18,
+          height: maxBarHeight,
+          alignment: Alignment.bottomCenter,
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF14171A) : const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Container(
+            width: 18,
+            height: fillHeight,
+            decoration: BoxDecoration(
+              color: barColor,
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+
+        // Label Nama Hari
+        Text(
+          dayLabel,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: isToday ? FontWeight.w800 : FontWeight.w600,
+            color: isToday
+                ? const Color(0xFF388AF6)
+                : (isDark ? const Color(0xFF808E9B) : const Color(0xFF718096)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSimpleMetric(String label, String value, Color color, Color textMuted) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           value,
           style: TextStyle(
-            fontSize: 20,
+            fontSize: 17,
             fontWeight: FontWeight.w900,
             color: color,
           ),
@@ -743,7 +1001,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           style: TextStyle(
             fontSize: 9,
             fontWeight: FontWeight.w800,
-            letterSpacing: 0.8,
+            letterSpacing: 0.5,
             color: textMuted,
           ),
         ),
@@ -759,32 +1017,26 @@ class _HistoryScreenState extends State<HistoryScreen> {
       onTap: () => setState(() => _activeFilter = filterKey),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected
               ? const Color(0xFF388AF6)
-              : isDark
-                  ? const Color(0xFF1E272E)
-                  : Colors.white,
-          borderRadius: BorderRadius.circular(12),
+              : (isDark ? const Color(0xFF1E272E) : Colors.white),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isSelected
                 ? const Color(0xFF388AF6)
-                : isDark
-                    ? const Color(0xFF2D3436)
-                    : const Color(0xFFE2E8F0),
+                : (isDark ? const Color(0xFF2D3436) : const Color(0xFFE2E8F0)),
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
             color: isSelected
                 ? Colors.white
-                : isDark
-                    ? const Color(0xFF808E9B)
-                    : const Color(0xFF718096),
+                : (isDark ? const Color(0xFF808E9B) : const Color(0xFF718096)),
           ),
         ),
       ),
