@@ -83,7 +83,7 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
     }
   }
 
-  // Opsi 1: Kerjakan Sekarang (Matikan alarm + checklist selesai)
+  // Opsi 1: Kerjakan (Matikan alarm + checklist selesai)
   Future<void> _handleCompleteNow() async {
     if (_isProcessing) return;
     setState(() => _isProcessing = true);
@@ -115,8 +115,8 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
     }
   }
 
-  // Opsi 2: Tambah Waktu (+10 Menit) -> Snooze otomatis majukan jadwal +10 menit & alarm baru
-  Future<void> _handleSnooze10Minutes() async {
+  // Opsi 2: Nanti Saja (+5 Menit) -> Snooze otomatis majukan jadwal +5 menit & alarm baru
+  Future<void> _handleSnooze5Minutes() async {
     if (_isProcessing) return;
     setState(() => _isProcessing = true);
 
@@ -124,15 +124,15 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
       // 1. Matikan dering alarm yang sedang aktif
       await Alarm.stop(widget.alarmSettings.id);
 
-      // 2. Ambil data agenda dan tambahkan waktunya 10 menit ke depan
+      // 2. Ambil data agenda dan tambahkan waktunya 5 menit ke depan
       final plan = _plan ?? await DatabaseService.instance.getPlanById(_realPlanId);
-      final newTime = DateTime.now().add(const Duration(minutes: 10));
+      final newTime = DateTime.now().add(const Duration(minutes: 5));
 
       if (plan != null) {
         final updatedPlan = plan.copyWith(scheduledTime: newTime);
         await DatabaseService.instance.updatePlan(updatedPlan);
 
-        // 3. Jadwalkan ulang alarm 10 menit ke depan
+        // 3. Jadwalkan ulang alarm 5 menit ke depan
         await AlarmService.instance.scheduleAlarm(
           id: plan.id!,
           dateTime: newTime,
@@ -152,7 +152,7 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                 const Icon(Icons.alarm_add_rounded, color: Colors.white, size: 20),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text('Waktu ditambah 10 menit (Alarm berikutnya: $nextTimeStr)'),
+                  child: Text('Jadwal ditunda +5 menit (Alarm berikutnya: $nextTimeStr)'),
                 ),
               ],
             ),
@@ -163,18 +163,28 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
         );
       }
     } catch (e) {
-      debugPrint('Error handling snooze 10m: $e');
+      debugPrint('Error handling snooze 5m: $e');
       if (mounted) Navigator.pop(context);
     }
   }
 
-  // Opsi 3: Matikan Alarm Saja
-  Future<void> _handleDismissOnly() async {
+  // Opsi 3: Hentikan Alarm
+  Future<void> _handleStopAlarm() async {
     if (_isProcessing) return;
     setState(() => _isProcessing = true);
 
     await Alarm.stop(widget.alarmSettings.id);
-    if (mounted) Navigator.pop(context);
+    if (mounted) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Alarm telah dihentikan.'),
+          backgroundColor: Color(0xFF1E272E),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override
@@ -323,7 +333,7 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
 
                 const Spacer(flex: 2),
 
-                // === DUA OPSI UTAMA SAAT ALARM BERBUNYI ===
+                // === TIGA OPSI UTAMA SAAT ALARM BERBUNYI ===
                 if (_isEarlyReminder) ...[
                   // Opsi untuk Pengingat Persiapan
                   SizedBox(
@@ -338,7 +348,7 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      onPressed: _handleDismissOnly,
+                      onPressed: _handleStopAlarm,
                       icon: const Icon(Icons.check_rounded, size: 22),
                       label: const Text(
                         'Siap, Saya Bersiap-siap!',
@@ -347,10 +357,10 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                     ),
                   ),
                 ] else ...[
-                  // OPSI 1: KERJAKAN SEKARANG
+                  // 1. TOMBOL KERJAKAN
                   SizedBox(
                     width: double.infinity,
-                    height: 56,
+                    height: 54,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF1DD1A1), // Emerald Green
@@ -364,14 +374,14 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.check_circle_rounded, size: 24, color: Color(0xFF0F141C)),
+                          Icon(Icons.check_circle_rounded, size: 22, color: Color(0xFF0F141C)),
                           SizedBox(width: 10),
                           Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Kerjakan Sekarang',
+                                'Kerjakan',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w900,
@@ -392,33 +402,33 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
 
-                  // OPSI 2: TAMBAHAN WAKTU (+10 MENIT)
+                  // 2. TOMBOL NANTI SAJA (+5 MENIT)
                   SizedBox(
                     width: double.infinity,
-                    height: 56,
+                    height: 54,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF388AF6), // Structured Blue
+                        backgroundColor: const Color(0xFF388AF6), // Valez Blue
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      onPressed: _isProcessing ? null : _handleSnooze10Minutes,
+                      onPressed: _isProcessing ? null : _handleSnooze5Minutes,
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.update_rounded, size: 24, color: Colors.white),
+                          Icon(Icons.update_rounded, size: 22, color: Colors.white),
                           SizedBox(width: 10),
                           Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Tambah Waktu (+10 Menit)',
+                                'Nanti Saja (+5 Menit)',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w900,
@@ -426,7 +436,7 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                                 ),
                               ),
                               Text(
-                                'Tunda jadwal 10 menit ke depan',
+                                'Tunda jadwal 5 menit ke depan',
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w500,
@@ -439,17 +449,36 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
 
-                  // OPSI TAMBAHAN: Matikan Alarm Saja
-                  TextButton(
-                    onPressed: _isProcessing ? null : _handleDismissOnly,
-                    child: const Text(
-                      'Matikan Alarm Saja',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF808E9B),
+                  // 3. TOMBOL HENTIKAN ALARM
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFF2D3436), width: 1.5),
+                        backgroundColor: const Color(0xFF1E272E),
+                        foregroundColor: const Color(0xFFFF5252),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: _isProcessing ? null : _handleStopAlarm,
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.stop_circle_outlined, size: 18, color: Color(0xFFFF5252)),
+                          SizedBox(width: 8),
+                          Text(
+                            'Hentikan Alarm',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFFFF5252),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

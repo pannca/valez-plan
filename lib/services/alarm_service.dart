@@ -64,7 +64,7 @@ class AlarmService {
         notificationSettings: NotificationSettings(
           title: '⏰ ValezPlan: $title',
           body: notes.isNotEmpty ? notes : 'Waktunya menjalankan jadwal kamu!',
-          stopButton: 'Matikan Alarm',
+          stopButton: 'Hentikan',
         ),
       );
 
