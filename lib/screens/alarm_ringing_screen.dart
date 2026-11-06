@@ -178,10 +178,18 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Alarm telah dihentikan.'),
-          backgroundColor: Color(0xFF1E272E),
+          content: Row(
+            children: [
+              Icon(Icons.history_toggle_off_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text('Alarm dihentikan. Masuk ke Riwayat (Terlewat), masih bisa kamu centang di Timeline hari ini.'),
+              ),
+            ],
+          ),
+          backgroundColor: Color(0xFF242C34),
           behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 2),
+          duration: Duration(seconds: 4),
         ),
       );
     }

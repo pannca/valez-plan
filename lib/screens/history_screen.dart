@@ -921,22 +921,37 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                     ),
                                     child: Row(
                                       children: [
-                                        // Status Bulat Bersih
-                                        Container(
-                                          width: 26,
-                                          height: 26,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color: plan.isCompleted
-                                                ? const Color(0xFF1DD1A1).withValues(alpha: 0.15)
-                                                : const Color(0xFFFF5252).withValues(alpha: 0.12),
-                                          ),
-                                          child: Icon(
-                                            plan.isCompleted ? Icons.check_rounded : Icons.close_rounded,
-                                            size: 15,
-                                            color: plan.isCompleted
-                                                ? const Color(0xFF1DD1A1)
-                                                : const Color(0xFFFF5252),
+                                        // Status Bulat Bersih & Interaktif (Bisa Dicentang Susulan)
+                                        GestureDetector(
+                                          onTap: () async {
+                                            if (plan.id != null) {
+                                              await DatabaseService.instance.toggleComplete(plan.id!, !plan.isCompleted);
+                                              _loadHistory();
+                                            }
+                                          },
+                                          behavior: HitTestBehavior.opaque,
+                                          child: Container(
+                                            width: 26,
+                                            height: 26,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: plan.isCompleted
+                                                  ? const Color(0xFF1DD1A1).withValues(alpha: 0.15)
+                                                  : (isDark ? const Color(0xFF242C34) : const Color(0xFFF1F5F9)),
+                                              border: Border.all(
+                                                color: plan.isCompleted
+                                                    ? const Color(0xFF1DD1A1)
+                                                    : (isDark ? const Color(0xFF3A444C) : const Color(0xFFCBD5E0)),
+                                                width: 1.5,
+                                              ),
+                                            ),
+                                            child: Icon(
+                                              plan.isCompleted ? Icons.check_rounded : Icons.close_rounded,
+                                              size: 14,
+                                              color: plan.isCompleted
+                                                  ? const Color(0xFF1DD1A1)
+                                                  : textMuted,
+                                            ),
                                           ),
                                         ),
                                         const SizedBox(width: 12),
@@ -974,7 +989,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                           ),
                                         ),
 
-                                        // Waktu & Kategori
+                                        // Waktu, Status Terlewat/Selesai & Kategori
                                         Column(
                                           crossAxisAlignment: CrossAxisAlignment.end,
                                           children: [
@@ -988,20 +1003,43 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                               ),
                                             ),
                                             const SizedBox(height: 3),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                              decoration: BoxDecoration(
-                                                color: categoryColor.withValues(alpha: 0.12),
-                                                borderRadius: BorderRadius.circular(4),
-                                              ),
-                                              child: Text(
-                                                plan.category.toUpperCase(),
-                                                style: TextStyle(
-                                                  fontSize: 8,
-                                                  fontWeight: FontWeight.w800,
-                                                  color: categoryColor,
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                if (!plan.isCompleted)
+                                                  Container(
+                                                    margin: const EdgeInsets.only(right: 4),
+                                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                                    decoration: BoxDecoration(
+                                                      color: (isDark ? const Color(0xFF2D3436) : const Color(0xFFE2E8F0)),
+                                                      borderRadius: BorderRadius.circular(4),
+                                                    ),
+                                                    child: const Text(
+                                                      'TERLEWAT',
+                                                      style: TextStyle(
+                                                        fontSize: 7,
+                                                        fontWeight: FontWeight.w800,
+                                                        color: Color(0xFF808E9B),
+                                                        letterSpacing: 0.5,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                                  decoration: BoxDecoration(
+                                                    color: categoryColor.withValues(alpha: 0.12),
+                                                    borderRadius: BorderRadius.circular(4),
+                                                  ),
+                                                  child: Text(
+                                                    plan.category.toUpperCase(),
+                                                    style: TextStyle(
+                                                      fontSize: 8,
+                                                      fontWeight: FontWeight.w800,
+                                                      color: categoryColor,
+                                                    ),
+                                                  ),
                                                 ),
-                                              ),
+                                              ],
                                             ),
                                           ],
                                         ),
