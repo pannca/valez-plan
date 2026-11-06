@@ -8,6 +8,7 @@ import '../widgets/timeline_current_time.dart';
 import '../widgets/timeline_gap_item.dart';
 import '../widgets/day_selector_bar.dart';
 import 'add_plan_sheet.dart';
+import 'routine_template_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -71,6 +72,19 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (_) => AddPlanSheet(
         initialDate: _selectedDate,
         onPlanAdded: () => _loadPlansForDate(_selectedDate),
+      ),
+    );
+  }
+
+  void _openTemplateSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => RoutineTemplateSheet(
+        targetDate: _selectedDate,
+        hasExistingPlans: _plans.isNotEmpty,
+        onTemplateApplied: () => _loadPlansForDate(_selectedDate),
       ),
     );
   }
@@ -157,7 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       const SizedBox(height: 16),
 
-                      // Baris Atas: Judul App & Counter Selesai
+                      // Baris Atas: Judul App & Action Buttons
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.center,
@@ -184,26 +198,62 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ],
                           ),
-                          if (_plans.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: cardBg,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: borderColor,
+                          Row(
+                            children: [
+                              // Tombol Template Rutinitas Cepat
+                              InkWell(
+                                onTap: _openTemplateSheet,
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 7),
+                                  decoration: BoxDecoration(
+                                    color: cardBg,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: borderColor),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.bolt_rounded,
+                                          color: Color(0xFF388AF6), size: 18),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Template',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w800,
+                                          color: Color(0xFF388AF6),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                              child: Text(
-                                '$completedCount / ${_plans.length} Selesai',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF1DD1A1),
+                              if (_plans.isNotEmpty) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 7),
+                                  decoration: BoxDecoration(
+                                    color: cardBg,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: borderColor,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    '$completedCount / ${_plans.length}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF1DD1A1),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
+                              ],
+                            ],
+                          ),
                         ],
                       ),
                       const SizedBox(height: 18),
@@ -221,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       // Konten Timeline
                       if (_plans.isEmpty)
                         Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 80),
+                          padding: const EdgeInsets.symmetric(vertical: 60),
                           child: Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -253,6 +303,28 @@ class _HomeScreenState extends State<HomeScreen> {
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: textMuted,
+                                  ),
+                                ),
+                                const SizedBox(height: 18),
+                                OutlinedButton.icon(
+                                  onPressed: _openTemplateSheet,
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: const Color(0xFF388AF6),
+                                    side: const BorderSide(
+                                        color: Color(0xFF388AF6), width: 1.5),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 10),
+                                  ),
+                                  icon: const Icon(Icons.bolt_rounded, size: 18),
+                                  label: const Text(
+                                    'Pilih Template Rutinitas',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 13,
+                                    ),
                                   ),
                                 ),
                               ],

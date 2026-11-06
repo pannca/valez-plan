@@ -65,6 +65,16 @@ class DatabaseService {
     return await db.insert('plans', plan.toMap());
   }
 
+  // Tambah sekumpulan jadwal sekaligus (misal dari template rutinitas)
+  Future<List<int>> insertMultiplePlans(List<PlanModel> plans) async {
+    final List<int> ids = [];
+    for (final plan in plans) {
+      final id = await insertPlan(plan);
+      ids.add(id);
+    }
+    return ids;
+  }
+
   // Sinkronisasi otomatis jadwal berulang (rutinitas) ke tanggal yang dibuka
   Future<void> _syncRecurringPlans(DateTime date) async {
     if (kIsWeb) {
