@@ -30,8 +30,10 @@ class AlarmSoundService {
 
   // Inisialisasi saat aplikasi pertama dibuka
   Future<void> init() async {
-    _previewPlayer.onPlayerComplete.listen((_) {
-      isPlayingPreviewNotifier.value = false;
+    _previewPlayer.onPlayerStateChanged.listen((state) {
+      if (state == PlayerState.completed || state == PlayerState.stopped) {
+        isPlayingPreviewNotifier.value = false;
+      }
     });
 
     if (kIsWeb) return;
@@ -137,6 +139,8 @@ class AlarmSoundService {
     } else {
       try {
         isPlayingPreviewNotifier.value = true;
+        await _previewPlayer.setVolume(1.0);
+
         if (_currentSoundPath.startsWith('assets/')) {
           final assetRelative = _currentSoundPath.replaceFirst('assets/', '');
           await _previewPlayer.play(AssetSource(assetRelative));
