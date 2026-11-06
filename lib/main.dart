@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'services/alarm_service.dart';
 import 'services/alarm_sound_service.dart';
+import 'services/system_permission_service.dart';
 import 'services/theme_service.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/alarm_ringing_screen.dart';
@@ -11,9 +12,10 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inisialisasi service Alarm & Suara
+  // Inisialisasi service Alarm, Suara, dan Izin Sistem
   await AlarmService.instance.init();
   await AlarmSoundService.instance.init();
+  await SystemPermissionService.instance.checkPermissions();
 
   runApp(const ValezPlanApp());
 }

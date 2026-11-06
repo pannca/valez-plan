@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/theme_service.dart';
 import '../services/alarm_sound_service.dart';
+import '../services/system_permission_service.dart';
+import '../widgets/permission_warning_sheet.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -121,27 +123,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _buildSectionHeader('SISTEM ALARM & NOTIFIKASI', textMuted),
               const SizedBox(height: 8),
 
-              Container(
-                decoration: BoxDecoration(
-                  color: cardBg,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: borderColor),
-                ),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              // Monitor Status Izin Alarm & Sistem
+              ValueListenableBuilder<SystemPermissionStatus>(
+                valueListenable:
+                    SystemPermissionService.instance.statusNotifier,
+                builder: (context, status, _) {
+                  final isReady = !status.hasAnyIssue;
+                  final statusColor = isReady
+                      ? const Color(0xFF1DD1A1)
+                      : const Color(0xFFFF9F43);
+
+                  return InkWell(
+                    onTap: () => PermissionWarningSheet.show(context),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isReady
+                              ? borderColor
+                              : const Color(0xFFFF9F43).withValues(alpha: 0.35),
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
                       child: Row(
                         children: [
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: const Color(0xFF1DD1A1).withValues(alpha: 0.15),
+                              color: statusColor.withValues(alpha: 0.15),
                             ),
-                            child: const Icon(
-                              Icons.alarm_on_rounded,
-                              color: Color(0xFF1DD1A1),
+                            child: Icon(
+                              isReady
+                                  ? Icons.alarm_on_rounded
+                                  : Icons.warning_amber_rounded,
+                              color: statusColor,
                               size: 22,
                             ),
                           ),
@@ -160,35 +179,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  'Aktif mendaftarkan ke sistem Android',
+                                  isReady
+                                      ? 'Optimal & aktif di sistem Android'
+                                      : '${status.issueCount} izin HP perlu diaktifkan (Tap di sini)',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: textMuted,
+                                    color: isReady ? textMuted : statusColor,
+                                    fontWeight: isReady
+                                        ? FontWeight.normal
+                                        : FontWeight.w600,
                                   ),
                                 ),
                               ],
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF1DD1A1).withValues(alpha: 0.15),
+                              color: statusColor.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Text(
-                              'READY',
+                            child: Text(
+                              isReady ? 'READY' : 'PERIKSA',
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w900,
-                                color: Color(0xFF1DD1A1),
+                                color: statusColor,
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
               const SizedBox(height: 12),
 

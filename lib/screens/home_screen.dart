@@ -7,6 +7,8 @@ import '../widgets/plan_card.dart';
 import '../widgets/timeline_current_time.dart';
 import '../widgets/timeline_gap_item.dart';
 import '../widgets/day_selector_bar.dart';
+import '../services/system_permission_service.dart';
+import '../widgets/permission_warning_sheet.dart';
 import 'add_plan_sheet.dart';
 import 'routine_template_sheet.dart';
 
@@ -17,7 +19,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   DateTime _selectedDate = DateTime.now();
   List<PlanModel> _plans = [];
   bool _isLoading = true;
@@ -25,7 +27,29 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadPlansForDate(_selectedDate);
+
+    // Cek izin sistem HP saat aplikasi terbuka, munculkan pop-up otomatis jika ada yang belum aktif
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final status = await SystemPermissionService.instance.checkPermissions();
+      if (status.hasAnyIssue && mounted) {
+        PermissionWarningSheet.show(context);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      SystemPermissionService.instance.checkPermissions();
+    }
   }
 
   Future<void> _loadPlansForDate(DateTime date) async {
@@ -255,6 +279,83 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         ],
+                      ),
+
+                      // Banner Peringatan Izin Sistem HP jika ada yang belum aktif
+                      ValueListenableBuilder<SystemPermissionStatus>(
+                        valueListenable:
+                            SystemPermissionService.instance.statusNotifier,
+                        builder: (_, status, __) {
+                          if (!status.hasAnyIssue) {
+                            return const SizedBox.shrink();
+                          }
+                          return Container(
+                            margin: const EdgeInsets.only(top: 14),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF9F43)
+                                  .withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xFFFF9F43)
+                                    .withValues(alpha: 0.35),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.warning_amber_rounded,
+                                  color: Color(0xFFFF9F43),
+                                  size: 22,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${status.issueCount} Izin HP Perlu Diaktifkan',
+                                        style: TextStyle(
+                                          color: textMain,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Agar alarm tidak terblokir saat HP sleep.',
+                                        style: TextStyle(
+                                            color: textMuted, fontSize: 11),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFFF9F43),
+                                    foregroundColor: Colors.black,
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 6),
+                                    minimumSize: const Size(0, 32),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  onPressed: () =>
+                                      PermissionWarningSheet.show(context),
+                                  child: const Text(
+                                    'Atur',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 12),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(height: 18),
 
