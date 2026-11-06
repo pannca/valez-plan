@@ -30,6 +30,23 @@ class AlarmSoundService {
 
   // Inisialisasi saat aplikasi pertama dibuka
   Future<void> init() async {
+    // Pastikan audio playback dikonfigurasi ke jalur STREAM_ALARM di sistem Android
+    try {
+      await AudioPlayer.global.setAudioContext(
+        AudioContext(
+          android: const AudioContextAndroid(
+            isSpeakerphoneOn: true,
+            stayAwake: true,
+            contentType: AndroidContentType.sonification,
+            usageType: AndroidUsageType.alarm,
+            audioFocus: AndroidAudioFocus.gainTransientExclusive,
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error configuring audio context: $e');
+    }
+
     _previewPlayer.onPlayerStateChanged.listen((state) {
       if (state == PlayerState.completed || state == PlayerState.stopped) {
         isPlayingPreviewNotifier.value = false;

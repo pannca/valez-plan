@@ -35,8 +35,10 @@ class AlarmService {
           assetAudioPath: soundPath,
           loopAudio: false,
           vibrate: true,
-          volume: 0.6,
-          fadeDuration: 1.0,
+          volume: 0.7,
+          volumeEnforced: true,
+          fadeDuration: 0.0,
+          androidFullScreenIntent: true,
           notificationSettings: NotificationSettings(
             title: '⏳ $earlyReminderMinutes Menit Lagi: $title',
             body: 'Jadwal dimulai pukul ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}. Siapkan dirimu!',
@@ -56,7 +58,9 @@ class AlarmService {
         loopAudio: true,
         vibrate: true,
         volume: 1.0,
-        fadeDuration: 2.0,
+        volumeEnforced: true,
+        fadeDuration: 0.0,
+        androidFullScreenIntent: true,
         notificationSettings: NotificationSettings(
           title: '⏰ ValezPlan: $title',
           body: notes.isNotEmpty ? notes : 'Waktunya menjalankan jadwal kamu!',

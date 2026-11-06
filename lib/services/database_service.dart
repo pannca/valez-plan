@@ -238,28 +238,61 @@ class DatabaseService {
     return result.map((map) => PlanModel.fromMap(map)).toList();
   }
 
-  // Ambil semua jadwal masa lalu (sebelum hari ini) untuk riwayat/history
+  // Ambil semua riwayat: jadwal yang sudah dilaksanakan (selesai) atau jadwal yang sudah lewat
   Future<List<PlanModel>> getHistoryPlans() async {
     final now = DateTime.now();
-    final startOfToday = DateTime(now.year, now.month, now.day);
 
     if (kIsWeb) {
       final past = _inMemoryPlans
-          .where((p) => p.scheduledTime.isBefore(startOfToday))
+          .where((p) => p.isCompleted || p.scheduledTime.isBefore(now))
           .toList();
       past.sort((a, b) => b.scheduledTime.compareTo(a.scheduledTime));
       return past;
     }
 
     final db = await database;
+    // Jadwal yang sudah dilaksanakan (is_completed = 1) langsung masuk history,
+    // begitu juga jadwal masa lalu yang sudah lewat.
     final result = await db.query(
       'plans',
-      where: 'scheduled_time < ?',
-      whereArgs: [startOfToday.toIso8601String()],
+      where: 'is_completed = 1 OR scheduled_time < ?',
+      whereArgs: [now.toIso8601String()],
       orderBy: 'scheduled_time DESC',
     );
 
     return result.map((map) => PlanModel.fromMap(map)).toList();
+  }
+
+  // Hapus semua riwayat yang sudah selesai
+  Future<int> deleteCompletedHistory() async {
+    if (kIsWeb) {
+      final before = _inMemoryPlans.length;
+      _inMemoryPlans.removeWhere((p) => p.isCompleted);
+      return before - _inMemoryPlans.length;
+    }
+
+    final db = await database;
+    return await db.delete(
+      'plans',
+      where: 'is_completed = 1',
+    );
+  }
+
+  // Hapus seluruh riwayat masa lalu dan yang sudah selesai
+  Future<int> clearAllHistory() async {
+    final now = DateTime.now();
+    if (kIsWeb) {
+      final before = _inMemoryPlans.length;
+      _inMemoryPlans.removeWhere((p) => p.isCompleted || p.scheduledTime.isBefore(now));
+      return before - _inMemoryPlans.length;
+    }
+
+    final db = await database;
+    return await db.delete(
+      'plans',
+      where: 'is_completed = 1 OR scheduled_time < ?',
+      whereArgs: [now.toIso8601String()],
+    );
   }
 
   // Ambil 1 jadwal berdasarkan ID
@@ -284,6 +317,27 @@ class DatabaseService {
       return PlanModel.fromMap(result.first);
     }
     return null;
+  }
+
+  // Update data jadwal (judul, waktu, catatan, alarm, kategori, dll)
+  Future<int> updatePlan(PlanModel plan) async {
+    if (plan.id == null) return 0;
+    if (kIsWeb) {
+      final index = _inMemoryPlans.indexWhere((p) => p.id == plan.id);
+      if (index != -1) {
+        _inMemoryPlans[index] = plan;
+        return 1;
+      }
+      return 0;
+    }
+
+    final db = await database;
+    return await db.update(
+      'plans',
+      plan.toMap(),
+      where: 'id = ?',
+      whereArgs: [plan.id],
+    );
   }
 
   // Update status checklist (selesai / belum)

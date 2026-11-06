@@ -7,11 +7,13 @@ import '../services/alarm_service.dart';
 class AddPlanSheet extends StatefulWidget {
   final VoidCallback onPlanAdded;
   final DateTime? initialDate;
+  final PlanModel? planToEdit;
 
   const AddPlanSheet({
     super.key,
     required this.onPlanAdded,
     this.initialDate,
+    this.planToEdit,
   });
 
   @override
@@ -32,7 +34,19 @@ class _AddPlanSheetState extends State<AddPlanSheet> {
   @override
   void initState() {
     super.initState();
-    _targetDate = widget.initialDate ?? DateTime.now();
+    if (widget.planToEdit != null) {
+      final p = widget.planToEdit!;
+      _titleController.text = p.title;
+      _notesController.text = p.notes;
+      _targetDate = p.scheduledTime;
+      _selectedTime = TimeOfDay(hour: p.scheduledTime.hour, minute: p.scheduledTime.minute);
+      _selectedCategory = p.category;
+      _repeatType = p.repeatType;
+      _earlyReminderMinutes = p.earlyReminderMinutes;
+      _isAlarmEnabled = p.isAlarmEnabled;
+    } else {
+      _targetDate = widget.initialDate ?? DateTime.now();
+    }
   }
 
   bool get _isTargetDateToday {
@@ -95,26 +109,53 @@ class _AddPlanSheetState extends State<AddPlanSheet> {
       _selectedTime.minute,
     );
 
-    final newPlan = PlanModel(
-      title: title,
-      notes: _notesController.text.trim(),
-      scheduledTime: scheduledDateTime,
-      isAlarmEnabled: _isAlarmEnabled,
-      category: _selectedCategory,
-      repeatType: _repeatType,
-      earlyReminderMinutes: _isAlarmEnabled ? _earlyReminderMinutes : 0,
-    );
-
-    final id = await DatabaseService.instance.insertPlan(newPlan);
-
-    if (_isAlarmEnabled) {
-      await AlarmService.instance.scheduleAlarm(
-        id: id,
-        dateTime: scheduledDateTime,
+    if (widget.planToEdit != null) {
+      final updatedPlan = widget.planToEdit!.copyWith(
         title: title,
         notes: _notesController.text.trim(),
-        earlyReminderMinutes: _earlyReminderMinutes,
+        scheduledTime: scheduledDateTime,
+        isAlarmEnabled: _isAlarmEnabled,
+        category: _selectedCategory,
+        repeatType: _repeatType,
+        earlyReminderMinutes: _isAlarmEnabled ? _earlyReminderMinutes : 0,
       );
+
+      await DatabaseService.instance.updatePlan(updatedPlan);
+
+      final planId = widget.planToEdit!.id!;
+      await AlarmService.instance.cancelAlarm(planId);
+
+      if (_isAlarmEnabled && scheduledDateTime.isAfter(DateTime.now())) {
+        await AlarmService.instance.scheduleAlarm(
+          id: planId,
+          dateTime: scheduledDateTime,
+          title: title,
+          notes: _notesController.text.trim(),
+          earlyReminderMinutes: _earlyReminderMinutes,
+        );
+      }
+    } else {
+      final newPlan = PlanModel(
+        title: title,
+        notes: _notesController.text.trim(),
+        scheduledTime: scheduledDateTime,
+        isAlarmEnabled: _isAlarmEnabled,
+        category: _selectedCategory,
+        repeatType: _repeatType,
+        earlyReminderMinutes: _isAlarmEnabled ? _earlyReminderMinutes : 0,
+      );
+
+      final id = await DatabaseService.instance.insertPlan(newPlan);
+
+      if (_isAlarmEnabled && scheduledDateTime.isAfter(DateTime.now())) {
+        await AlarmService.instance.scheduleAlarm(
+          id: id,
+          dateTime: scheduledDateTime,
+          title: title,
+          notes: _notesController.text.trim(),
+          earlyReminderMinutes: _earlyReminderMinutes,
+        );
+      }
     }
 
     widget.onPlanAdded();
@@ -164,7 +205,7 @@ class _AddPlanSheetState extends State<AddPlanSheet> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Tambah Agenda',
+                  widget.planToEdit != null ? 'Edit Agenda' : 'Tambah Agenda',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
@@ -594,9 +635,9 @@ class _AddPlanSheetState extends State<AddPlanSheet> {
                   ),
                 ),
                 onPressed: _savePlan,
-                child: const Text(
-                  'Simpan Agenda',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                child: Text(
+                  widget.planToEdit != null ? 'Simpan Perubahan' : 'Simpan Agenda',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
                 ),
               ),
             ),

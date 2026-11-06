@@ -6,6 +6,7 @@ class PlanCard extends StatelessWidget {
   final PlanModel plan;
   final ValueChanged<bool> onToggleComplete;
   final VoidCallback onDelete;
+  final VoidCallback? onEdit;
   final bool isFirst;
   final bool isLast;
 
@@ -14,6 +15,7 @@ class PlanCard extends StatelessWidget {
     required this.plan,
     required this.onToggleComplete,
     required this.onDelete,
+    this.onEdit,
     this.isFirst = false,
     this.isLast = false,
   });
@@ -200,19 +202,22 @@ class PlanCard extends StatelessWidget {
 
             // Kolom 3: Kartu Agenda ala Structured
             Expanded(
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                margin: const EdgeInsets.symmetric(vertical: 6),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: cardBg,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: borderColor,
-                    width: 1,
+              child: InkWell(
+                onTap: onEdit,
+                borderRadius: BorderRadius.circular(16),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: cardBg,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: borderColor,
+                      width: 1,
+                    ),
                   ),
-                ),
-                child: Column(
+                  child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Baris Atas: Judul & Alarm Pill
@@ -405,12 +410,20 @@ class PlanCard extends StatelessWidget {
                             ),
                           ),
                         ],
+                        const Spacer(),
+                        if (onEdit != null)
+                          Icon(
+                            Icons.edit_outlined,
+                            size: 13,
+                            color: textNotes.withValues(alpha: 0.7),
+                          ),
                       ],
                     ),
                   ],
                 ),
               ),
             ),
+          ),
           ],
         ),
       ),

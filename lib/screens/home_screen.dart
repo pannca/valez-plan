@@ -49,6 +49,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       SystemPermissionService.instance.checkPermissions();
+      _loadPlansForDate(_selectedDate);
     }
   }
 
@@ -95,6 +96,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
       builder: (_) => AddPlanSheet(
         initialDate: _selectedDate,
+        onPlanAdded: () => _loadPlansForDate(_selectedDate),
+      ),
+    );
+  }
+
+  void _openEditPlanSheet(PlanModel plan) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF1E272E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => AddPlanSheet(
+        initialDate: plan.scheduledTime,
+        planToEdit: plan,
         onPlanAdded: () => _loadPlansForDate(_selectedDate),
       ),
     );
@@ -152,6 +169,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           isLast: i == _plans.length - 1,
           onToggleComplete: (val) => _toggleComplete(currentPlan, val),
           onDelete: () => _deletePlan(currentPlan),
+          onEdit: () => _openEditPlanSheet(currentPlan),
         ),
       );
     }

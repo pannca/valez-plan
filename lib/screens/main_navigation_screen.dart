@@ -12,12 +12,7 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
-
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    HistoryScreen(),
-    SettingsScreen(),
-  ];
+  Key _historyKey = UniqueKey();
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +23,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: [
+          const HomeScreen(),
+          HistoryScreen(key: _historyKey),
+          const SettingsScreen(),
+        ],
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -61,7 +60,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     final inactiveColor = isDark ? const Color(0xFF808E9B) : const Color(0xFF718096);
 
     return GestureDetector(
-      onTap: () => setState(() => _currentIndex = index),
+      onTap: () {
+        setState(() {
+          _currentIndex = index;
+          if (index == 1) {
+            _historyKey = UniqueKey();
+          }
+        });
+      },
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
