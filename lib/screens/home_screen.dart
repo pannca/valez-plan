@@ -137,6 +137,94 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         date.day == now.day;
   }
 
+  Widget _buildTodayStreakStatus(int completedCount) {
+    final now = DateTime.now();
+    final isWeekend = now.weekday == DateTime.saturday || now.weekday == DateTime.sunday;
+
+    if (isWeekend) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: const Color(0xFF00CEC9).withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.battery_charging_full_rounded, size: 12, color: Color(0xFF00CEC9)),
+            const SizedBox(width: 4),
+            Text(
+              completedCount > 0
+                  ? '🔋 Weekend Bonus (+$completedCount Selesai)'
+                  : '🔋 Weekend Recharge • Streak Aman',
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF00CEC9),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (completedCount > 0) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1DD1A1).withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.local_fire_department_rounded, size: 12, color: Color(0xFF1DD1A1)),
+            SizedBox(width: 4),
+            Text(
+              '🔥 Api Hari Ini Menyala!',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1DD1A1),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Jika belum ada agenda selesai di hari kerja
+    final isEvening = now.hour >= 17;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: (isEvening ? const Color(0xFFFF5252) : const Color(0xFFFF9F43)).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isEvening ? Icons.warning_amber_rounded : Icons.local_fire_department_rounded,
+            size: 12,
+            color: isEvening ? const Color(0xFFFF5252) : const Color(0xFFFF9F43),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            isEvening
+                ? '⚠️ Api Terancam Padam! Selesaikan 1 kegiatan'
+                : 'Senin - Jumat: Selesaikan 1 kegiatan untuk api',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: isEvening ? const Color(0xFFFF5252) : const Color(0xFFFF9F43),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   List<Widget> _buildTimelineWidgets() {
     final List<Widget> widgets = [];
     final now = DateTime.now();
@@ -271,6 +359,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   ],
                                 ],
                               ),
+                              if (_isToday(_selectedDate)) ...[
+                                const SizedBox(height: 6),
+                                _buildTodayStreakStatus(completedCount),
+                              ],
                             ],
                           ),
                           Row(

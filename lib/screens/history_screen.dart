@@ -56,9 +56,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
-  // 1. Hitung Streak (Berapa hari berturut-turut disiplin menyelesaikan agenda)
-  int _calculateStreak() {
-    if (_historyPlans.isEmpty) return 0;
+  bool _isWeekend(DateTime date) {
+    return date.weekday == DateTime.saturday || date.weekday == DateTime.sunday;
+  }
+
+  // 1. Hitung Streak & Status Disiplin (Senin-Jumat Wajib, Sabtu-Minggu Weekend Recharge 🔋)
+  ({int streak, bool isWeekendRecharge, bool isAtRiskToday, bool isCompletedToday}) _calculateStreakInfo() {
+    if (_historyPlans.isEmpty) {
+      final now = DateTime.now();
+      return (
+        streak: 0,
+        isWeekendRecharge: _isWeekend(now),
+        isAtRiskToday: !_isWeekend(now) && now.hour >= 17,
+        isCompletedToday: false,
+      );
+    }
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -74,29 +86,50 @@ class _HistoryScreenState extends State<HistoryScreen> {
       }
     }
 
-    if (completedDays.isEmpty) return 0;
+    final isTodayWeekend = _isWeekend(today);
+    final hasCompletedToday = completedDays.contains(today);
+    final isAtRiskToday = !isTodayWeekend && !hasCompletedToday && now.hour >= 17;
 
     int streak = 0;
     DateTime checkDate = today;
 
-    // Jika hari ini belum ada agenda selesai, periksa dari kemarin
-    if (!completedDays.contains(checkDate)) {
+    // Jika hari ini belum ada agenda selesai:
+    // - Jika hari ini weekend: mulai cek dari hari kerja terakhir (Jumat)
+    // - Jika hari ini hari kerja: karena hari ini masih berjalan, streak kemarin tetap dipertahankan sampai 23:59
+    if (!hasCompletedToday) {
       checkDate = today.subtract(const Duration(days: 1));
     }
 
-    while (completedDays.contains(checkDate)) {
-      streak++;
+    // Telusuri hari demi hari ke belakang
+    for (int i = 0; i < 365; i++) {
+      final isCheckWeekend = _isWeekend(checkDate);
+      final hasCompleted = completedDays.contains(checkDate);
+
+      if (hasCompleted) {
+        streak++;
+      } else if (isCheckWeekend) {
+        // Akhir pekan (Sabtu/Minggu) tanpa kegiatan: AMAN (Weekend Recharge), lewati tanpa memutuskan streak
+      } else {
+        // Hari kerja (Senin-Jumat) tanpa kegiatan selesai: STREAK PUTUS!
+        break;
+      }
+
       checkDate = checkDate.subtract(const Duration(days: 1));
     }
 
-    return streak;
+    return (
+      streak: streak,
+      isWeekendRecharge: isTodayWeekend,
+      isAtRiskToday: isAtRiskToday,
+      isCompletedToday: hasCompletedToday,
+    );
   }
 
   // 2. Data 7 Hari Terakhir untuk Mini Activity Bar Chart
-  List<({String dayLabel, int completed, int total, bool isToday})> _getWeeklyData() {
+  List<({String dayLabel, int completed, int total, bool isToday, bool isWeekend})> _getWeeklyData() {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final List<({String dayLabel, int completed, int total, bool isToday})> result = [];
+    final List<({String dayLabel, int completed, int total, bool isToday, bool isWeekend})> result = [];
 
     final dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
@@ -110,12 +143,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
       final completed = dayPlans.where((p) => p.isCompleted).length;
       final total = dayPlans.length;
       final dayLabel = dayNames[date.weekday % 7];
+      final isWeekend = _isWeekend(date);
 
       result.add((
         dayLabel: dayLabel,
         completed: completed,
         total: total,
         isToday: i == 0,
+        isWeekend: isWeekend,
       ));
     }
 
@@ -408,7 +443,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final completionRate =
         totalCount == 0 ? 0 : ((completedCount / totalCount) * 100).toInt();
 
-    final streak = _calculateStreak();
+    final streakInfo = _calculateStreakInfo();
     final weeklyData = _getWeeklyData();
     final categoryDist = _getCategoryDistribution();
 
@@ -500,70 +535,151 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: borderColor),
                         ),
-                        child: Row(
+                        child: Column(
                           children: [
-                            // Badge Streak Api Bersih
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFF9F43).withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Row(
+                            Row(
+                              children: [
+                                // Badge Streak Dinamis (Baterai Recharge vs Api Beruntun)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: streakInfo.isWeekendRecharge
+                                        ? const Color(0xFF00CEC9).withValues(alpha: 0.12)
+                                        : (streakInfo.isAtRiskToday
+                                            ? const Color(0xFFFF5252).withValues(alpha: 0.15)
+                                            : const Color(0xFFFF9F43).withValues(alpha: 0.12)),
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Icons.local_fire_department_rounded,
-                                          color: Color(0xFFFF9F43), size: 22),
-                                      const SizedBox(width: 4),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            streakInfo.isWeekendRecharge
+                                                ? Icons.battery_charging_full_rounded
+                                                : (streakInfo.isAtRiskToday
+                                                    ? Icons.warning_amber_rounded
+                                                    : Icons.local_fire_department_rounded),
+                                            color: streakInfo.isWeekendRecharge
+                                                ? const Color(0xFF00CEC9)
+                                                : (streakInfo.isAtRiskToday
+                                                    ? const Color(0xFFFF5252)
+                                                    : const Color(0xFFFF9F43)),
+                                            size: 22,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '${streakInfo.streak}',
+                                            style: TextStyle(
+                                              fontSize: 22,
+                                              fontWeight: FontWeight.w900,
+                                              color: streakInfo.isWeekendRecharge
+                                                  ? const Color(0xFF00CEC9)
+                                                  : (streakInfo.isAtRiskToday
+                                                      ? const Color(0xFFFF5252)
+                                                      : const Color(0xFFFF9F43)),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 2),
                                       Text(
-                                        '$streak',
-                                        style: const TextStyle(
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.w900,
-                                          color: Color(0xFFFF9F43),
+                                        streakInfo.isWeekendRecharge
+                                            ? 'RECHARGE'
+                                            : (streakInfo.isAtRiskToday ? 'TERANCAM' : 'HARI STREAK'),
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 0.5,
+                                          color: streakInfo.isWeekendRecharge
+                                              ? const Color(0xFF00CEC9)
+                                              : (streakInfo.isAtRiskToday
+                                                  ? const Color(0xFFFF5252)
+                                                  : const Color(0xFFFF9F43)),
                                         ),
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 2),
-                                  const Text(
-                                    'HARI STREAK',
-                                    style: TextStyle(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 0.5,
-                                      color: Color(0xFFFF9F43),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 16),
+                                ),
+                                const SizedBox(width: 16),
 
-                            // Ringkasan Dua Metrik Utama
-                            Expanded(
+                                // Ringkasan Dua Metrik Utama
+                                Expanded(
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                    children: [
+                                      _buildSimpleMetric(
+                                        'SELESAI',
+                                        '$completedCount / $totalCount',
+                                        const Color(0xFF1DD1A1),
+                                        textMuted,
+                                      ),
+                                      Container(
+                                        height: 32,
+                                        width: 1,
+                                        color: borderColor,
+                                      ),
+                                      _buildSimpleMetric(
+                                        'DISIPLIN',
+                                        '$completionRate%',
+                                        const Color(0xFF388AF6),
+                                        textMuted,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+
+                            // Banner Penjelasan Aturan Weekday & Weekend Recharge
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF14171A) : const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: streakInfo.isAtRiskToday
+                                      ? const Color(0xFFFF5252).withValues(alpha: 0.3)
+                                      : borderColor.withValues(alpha: 0.5),
+                                ),
+                              ),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceAround,
                                 children: [
-                                  _buildSimpleMetric(
-                                    'SELESAI',
-                                    '$completedCount / $totalCount',
-                                    const Color(0xFF1DD1A1),
-                                    textMuted,
+                                  Icon(
+                                    streakInfo.isWeekendRecharge
+                                        ? Icons.battery_charging_full_rounded
+                                        : (streakInfo.isAtRiskToday
+                                            ? Icons.alarm_rounded
+                                            : Icons.check_circle_outline_rounded),
+                                    size: 14,
+                                    color: streakInfo.isWeekendRecharge
+                                        ? const Color(0xFF00CEC9)
+                                        : (streakInfo.isAtRiskToday
+                                            ? const Color(0xFFFF5252)
+                                            : const Color(0xFF1DD1A1)),
                                   ),
-                                  Container(
-                                    height: 32,
-                                    width: 1,
-                                    color: borderColor,
-                                  ),
-                                  _buildSimpleMetric(
-                                    'DISIPLIN',
-                                    '$completionRate%',
-                                    const Color(0xFF388AF6),
-                                    textMuted,
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      streakInfo.isWeekendRecharge
+                                          ? 'Sabtu & Minggu waktu isi ulang baterai. Streak kamu aman tanpa ada kegiatan!'
+                                          : (streakInfo.isCompletedToday
+                                              ? 'Hebat! Api hari ini menyala. Streak berlanjut ke hari kerja berikutnya.'
+                                              : (streakInfo.isAtRiskToday
+                                                  ? '⚠️ Selesaikan minimal 1 kegiatan sebelum 00:00 agar api streak tidak padam!'
+                                                  : 'Senin - Jumat wajib ada kegiatan selesai agar api tidak padam.')),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: streakInfo.isAtRiskToday
+                                            ? const Color(0xFFFF5252)
+                                            : textMuted,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -620,6 +736,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   dayLabel: d.dayLabel,
                                   completed: d.completed,
                                   isToday: d.isToday,
+                                  isWeekend: d.isWeekend,
                                   isDark: isDark,
                                 );
                               }).toList(),
@@ -922,29 +1039,40 @@ class _HistoryScreenState extends State<HistoryScreen> {
     required String dayLabel,
     required int completed,
     required bool isToday,
+    required bool isWeekend,
     required bool isDark,
   }) {
     final double maxBarHeight = 44.0;
-    // Tinggi batang menyesuaikan jumlah agenda selesai (maksimal 5 agenda dianggap penuh)
     final double fillHeight = completed == 0
         ? 4.0
         : (completed / 5.0 * maxBarHeight).clamp(8.0, maxBarHeight);
 
+    final isRecharging = isWeekend && completed == 0;
+
     final barColor = isToday
         ? const Color(0xFF388AF6) // Biru hari ini
-        : (completed > 0 ? const Color(0xFF1DD1A1) : (isDark ? const Color(0xFF2D3436) : const Color(0xFFE2E8F0)));
+        : (completed > 0
+            ? const Color(0xFF1DD1A1) // Mint
+            : (isRecharging
+                ? const Color(0xFF00CEC9).withValues(alpha: 0.4) // Cyan battery recharge
+                : (isDark ? const Color(0xFF2D3436) : const Color(0xFFE2E8F0))));
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Angka selesai di atas batang
-        Text(
-          completed > 0 ? '$completed' : '',
-          style: TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.w800,
-            color: barColor,
-          ),
+        // Indikator atas batang (Angka selesai atau icon baterai recharge)
+        SizedBox(
+          height: 14,
+          child: isRecharging
+              ? const Icon(Icons.battery_charging_full_rounded, size: 13, color: Color(0xFF00CEC9))
+              : Text(
+                  completed > 0 ? '$completed' : '',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    color: barColor,
+                  ),
+                ),
         ),
         const SizedBox(height: 4),
 
@@ -959,7 +1087,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ),
           child: Container(
             width: 18,
-            height: fillHeight,
+            height: isRecharging ? 8.0 : fillHeight,
             decoration: BoxDecoration(
               color: barColor,
               borderRadius: BorderRadius.circular(6),
@@ -976,7 +1104,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
             fontWeight: isToday ? FontWeight.w800 : FontWeight.w600,
             color: isToday
                 ? const Color(0xFF388AF6)
-                : (isDark ? const Color(0xFF808E9B) : const Color(0xFF718096)),
+                : (isRecharging
+                    ? const Color(0xFF00CEC9)
+                    : (isDark ? const Color(0xFF808E9B) : const Color(0xFF718096))),
           ),
         ),
       ],
