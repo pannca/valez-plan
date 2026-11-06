@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/theme_service.dart';
+import '../services/alarm_sound_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -184,6 +185,193 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Kartu Pilihan & Upload Suara Alarm
+              Container(
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: borderColor),
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFFA259FF).withValues(alpha: 0.15),
+                          ),
+                          child: const Icon(
+                            Icons.music_note_rounded,
+                            color: Color(0xFFA259FF),
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Nada Suara Alarm',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: textMain,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              ValueListenableBuilder<String>(
+                                valueListenable: AlarmSoundService.instance.soundNameNotifier,
+                                builder: (_, soundName, __) {
+                                  return Text(
+                                    soundName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFFA259FF),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Tombol Play / Stop Cuplikan
+                        ValueListenableBuilder<bool>(
+                          valueListenable: AlarmSoundService.instance.isPlayingPreviewNotifier,
+                          builder: (_, isPlaying, __) {
+                            return IconButton(
+                              tooltip: isPlaying ? 'Berhenti' : 'Putar Cuplikan',
+                              onPressed: () => AlarmSoundService.instance.togglePreview(),
+                              icon: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: isPlaying
+                                      ? const Color(0xFFFF5252).withValues(alpha: 0.15)
+                                      : const Color(0xFF388AF6).withValues(alpha: 0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  isPlaying ? Icons.stop_rounded : Icons.play_arrow_rounded,
+                                  color: isPlaying ? const Color(0xFFFF5252) : const Color(0xFF388AF6),
+                                  size: 20,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    const Divider(height: 1),
+                    const SizedBox(height: 12),
+
+                    // Tombol Upload / Pilih File Audio Sendiri
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF388AF6),
+                              side: const BorderSide(color: Color(0xFF388AF6)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            onPressed: () async {
+                              final success = await AlarmSoundService.instance.pickCustomAudio();
+                              if (success && context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    backgroundColor: const Color(0xFF1E272E),
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    content: Row(
+                                      children: [
+                                        const Icon(Icons.check_circle_rounded,
+                                            color: Color(0xFF1DD1A1), size: 20),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            'Suara alarm diubah ke: ${AlarmSoundService.instance.currentSoundName}',
+                                            style: const TextStyle(
+                                                color: Colors.white, fontWeight: FontWeight.w600),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.upload_file_rounded, size: 18),
+                            label: const Text(
+                              'Pilih Audio Sendiri',
+                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                            ),
+                          ),
+                        ),
+                        ValueListenableBuilder<String>(
+                          valueListenable: AlarmSoundService.instance.soundPathNotifier,
+                          builder: (_, path, __) {
+                            if (path == AlarmSoundService.defaultSoundPath) {
+                              return const SizedBox.shrink();
+                            }
+                            return Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: TextButton.icon(
+                                style: TextButton.styleFrom(
+                                  foregroundColor: textMuted,
+                                ),
+                                onPressed: () async {
+                                  await AlarmSoundService.instance.resetToDefault();
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        backgroundColor: const Color(0xFF1E272E),
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        content: const Text(
+                                          'Suara alarm dikembalikan ke default.',
+                                          style: TextStyle(color: Colors.white),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                                icon: const Icon(Icons.refresh_rounded, size: 16),
+                                label: const Text('Reset', style: TextStyle(fontSize: 12)),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Mendukung MP3, WAV, AAC, M4A dari memori HP. File akan disimpan aman di internal aplikasi.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: textMuted,
+                        height: 1.3,
                       ),
                     ),
                   ],

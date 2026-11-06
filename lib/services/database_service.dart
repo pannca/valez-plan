@@ -26,7 +26,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -46,6 +46,13 @@ class DatabaseService {
         early_reminder_minutes INTEGER NOT NULL DEFAULT 0
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE app_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    ''');
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -54,6 +61,14 @@ class DatabaseService {
     }
     if (oldVersion < 3) {
       await db.execute("ALTER TABLE plans ADD COLUMN early_reminder_minutes INTEGER NOT NULL DEFAULT 0");
+    }
+    if (oldVersion < 4) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS app_settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        )
+      ''');
     }
   }
 
@@ -304,6 +319,33 @@ class DatabaseService {
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  // Simpan pengaturan aplikasi (key-value)
+  Future<void> setSetting(String key, String value) async {
+    if (kIsWeb) return;
+    final db = await database;
+    await db.insert(
+      'app_settings',
+      {'key': key, 'value': value},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  // Ambil pengaturan aplikasi berdasarkan key
+  Future<String?> getSetting(String key) async {
+    if (kIsWeb) return null;
+    final db = await database;
+    final res = await db.query(
+      'app_settings',
+      where: 'key = ?',
+      whereArgs: [key],
+      limit: 1,
+    );
+    if (res.isNotEmpty) {
+      return res.first['value'] as String?;
+    }
+    return null;
   }
 
   // Tutup koneksi database

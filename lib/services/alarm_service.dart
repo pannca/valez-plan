@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:alarm/alarm.dart';
+import 'alarm_sound_service.dart';
 
 class AlarmService {
   static final AlarmService instance = AlarmService._init();
@@ -21,6 +22,7 @@ class AlarmService {
   }) async {
     if (kIsWeb) return;
     final now = DateTime.now();
+    final soundPath = AlarmSoundService.instance.currentSoundPath;
 
     // 1. Jadwalkan Pengingat Awal (Early Reminder) jika diaktifkan (> 0 menit)
     if (earlyReminderMinutes > 0) {
@@ -30,7 +32,7 @@ class AlarmService {
         final earlySettings = AlarmSettings(
           id: earlyAlarmId,
           dateTime: earlyTime,
-          assetAudioPath: 'assets/sounds/alarm.mp3',
+          assetAudioPath: soundPath,
           loopAudio: false,
           vibrate: true,
           volume: 0.6,
@@ -50,7 +52,7 @@ class AlarmService {
       final alarmSettings = AlarmSettings(
         id: id,
         dateTime: dateTime,
-        assetAudioPath: 'assets/sounds/alarm.mp3',
+        assetAudioPath: soundPath,
         loopAudio: true,
         vibrate: true,
         volume: 1.0,
