@@ -437,11 +437,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 onRefresh: _loadHistory,
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 22),
 
                       // Baris Header Judul & Tombol Kelola
                       Row(
@@ -455,13 +455,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 Text(
                                   'Performa & Riwayat',
                                   style: TextStyle(
-                                    fontSize: 26,
+                                    fontSize: 28,
                                     fontWeight: FontWeight.w900,
                                     color: textMain,
                                     letterSpacing: -0.5,
                                   ),
                                 ),
-                                const SizedBox(height: 2),
+                                const SizedBox(height: 4),
                                 Text(
                                   'Konsistensi disiplin & catatan agenda harian',
                                   style: TextStyle(

@@ -23,11 +23,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 16),
+              const SizedBox(height: 22),
 
               // Judul Pengaturan
               Text(
@@ -39,6 +39,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   letterSpacing: -0.5,
                 ),
               ),
+              const SizedBox(height: 4),
               Text(
                 'Kustomisasi tampilan & sistem aplikasi',
                 style: TextStyle(

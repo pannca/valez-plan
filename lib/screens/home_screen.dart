@@ -207,11 +207,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 onRefresh: () => _loadPlansForDate(_selectedDate),
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 22),
 
                       // Baris Atas: Judul App & Action Buttons
                       Row(
@@ -224,12 +224,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               Text(
                                 'Timeline',
                                 style: TextStyle(
-                                  fontSize: 28,
+                                  fontSize: 30,
                                   fontWeight: FontWeight.w900,
                                   color: textMain,
                                   letterSpacing: -0.5,
                                 ),
                               ),
+                              const SizedBox(height: 4),
                               Row(
                                 children: [
                                   Text(
