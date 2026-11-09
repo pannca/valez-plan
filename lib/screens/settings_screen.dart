@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../services/theme_service.dart';
 import '../services/alarm_sound_service.dart';
 import '../services/system_permission_service.dart';
+import '../services/tolerance_service.dart';
+import '../theme/app_colors.dart';
 import '../widgets/permission_warning_sheet.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -15,10 +17,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF1E272E) : Colors.white;
-    final textMuted = isDark ? const Color(0xFF808E9B) : const Color(0xFF718096);
-    final textMain = isDark ? Colors.white : const Color(0xFF2D3748);
-    final borderColor = isDark ? const Color(0xFF2D3436) : const Color(0xFFE2E8F0);
+    final cardBg = AppColors.surface(isDark);
+    final textMuted = AppColors.muted(isDark);
+    final textMain = AppColors.ink(isDark);
+    final borderColor = AppColors.border(isDark);
+    final accentColor = AppColors.accent(isDark);
 
     return Scaffold(
       body: SafeArea(
@@ -34,21 +37,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 'Pengaturan',
                 style: TextStyle(
                   fontSize: 28,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w800,
                   color: textMain,
                   letterSpacing: -0.5,
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Kustomisasi tampilan & sistem aplikasi',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: textMuted,
-                ),
-              ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
               // SECTION 1: TAMPILAN (TEMA)
               _buildSectionHeader('TAMPILAN', textMuted),
@@ -57,7 +51,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Container(
                 decoration: BoxDecoration(
                   color: cardBg,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: borderColor),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -70,14 +64,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: isDark
-                                ? const Color(0xFF388AF6).withValues(alpha: 0.15)
-                                : const Color(0xFFFF9F43).withValues(alpha: 0.15),
+                            color: AppColors.accentSoft(isDark),
                           ),
                           child: Icon(
                             isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-                            color: isDark ? const Color(0xFF388AF6) : const Color(0xFFFF9F43),
-                            size: 22,
+                            color: accentColor,
+                            size: 20,
                           ),
                         ),
                         const SizedBox(width: 14),
@@ -85,16 +77,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              isDark ? 'Mode Malam (Gelap)' : 'Mode Siang (Terang)',
+                              isDark ? 'Mode Gelap' : 'Mode Terang',
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 15,
                                 fontWeight: FontWeight.w700,
                                 color: textMain,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              isDark ? 'Tampilan gelap nyaman di mata' : 'Tampilan terang bersih & jelas',
+                              isDark ? 'Tema gelap aktif' : 'Tema terang aktif',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: textMuted,
@@ -106,13 +98,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     Switch(
                       value: isDark,
-                      activeThumbColor: const Color(0xFF388AF6),
-                      activeTrackColor: const Color(0xFF388AF6).withValues(alpha: 0.3),
-                      inactiveThumbColor: const Color(0xFFFF9F43),
-                      inactiveTrackColor: const Color(0xFFFF9F43).withValues(alpha: 0.3),
-                      onChanged: (val) {
-                        ThemeService.instance.setDarkMode(val);
-                        setState(() {});
+                      activeThumbColor: accentColor,
+                      activeTrackColor: AppColors.accentSoft(isDark),
+                      inactiveThumbColor: AppColors.muted(isDark),
+                      inactiveTrackColor: AppColors.surfaceSubtle(isDark),
+                      onChanged: (val) async {
+                        await ThemeService.instance.setDarkMode(val);
+                        if (mounted) setState(() {});
                       },
                     ),
                   ],
@@ -120,8 +112,122 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 24),
 
-              // SECTION 2: SISTEM ALARM
-              _buildSectionHeader('SISTEM ALARM & NOTIFIKASI', textMuted),
+              // SECTION 2: DISIPLIN WAKTU
+              _buildSectionHeader('DISIPLIN WAKTU', textMuted),
+              const SizedBox(height: 8),
+
+              ValueListenableBuilder<int>(
+                valueListenable:
+                    ToleranceService.instance.toleranceMinutesNotifier,
+                builder: (context, currentTolerance, _) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: cardBg,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: borderColor),
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppColors.accentSoft(isDark),
+                              ),
+                              child: Icon(
+                                Icons.timelapse_rounded,
+                                color: accentColor,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Toleransi Keterlambatan',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: textMain,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Batas waktu sebelum jadwal dikunci terlewat',
+                                    style: TextStyle(
+                                        fontSize: 12, color: textMuted),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            (30, '30 mnt'),
+                            (60, '60 mnt'),
+                            (120, '2 jam'),
+                            (-1, 'Akhir hari'),
+                          ].map((item) {
+                            final isSelected = currentTolerance == item.$1;
+                            return Expanded(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 3),
+                                child: GestureDetector(
+                                  onTap: () => ToleranceService.instance
+                                      .setTolerance(item.$1),
+                                  child: AnimatedContainer(
+                                    duration:
+                                        const Duration(milliseconds: 200),
+                                    padding:
+                                        const EdgeInsets.symmetric(vertical: 8),
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? AppColors.accentSoft(isDark)
+                                          : AppColors.surfaceSubtle(isDark),
+                                      borderRadius:
+                                          BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? accentColor
+                                            : borderColor,
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      item.$2,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: isSelected
+                                            ? accentColor
+                                            : textMain,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+
+              // SECTION 3: SISTEM ALARM
+              _buildSectionHeader('ALARM & NOTIFIKASI', textMuted),
               const SizedBox(height: 8),
 
               // Monitor Status Izin Alarm & Sistem
@@ -131,20 +237,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 builder: (context, status, _) {
                   final isReady = !status.hasAnyIssue;
                   final statusColor = isReady
-                      ? const Color(0xFF1DD1A1)
-                      : const Color(0xFFFF9F43);
+                      ? AppColors.success
+                      : AppColors.warning;
 
                   return InkWell(
                     onTap: () => PermissionWarningSheet.show(context),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(14),
                     child: Container(
                       decoration: BoxDecoration(
                         color: cardBg,
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: isReady
                               ? borderColor
-                              : const Color(0xFFFF9F43).withValues(alpha: 0.35),
+                              : AppColors.statusBorder(AppColors.warning, isDark),
                         ),
                       ),
                       padding: const EdgeInsets.symmetric(
@@ -155,14 +261,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: statusColor.withValues(alpha: 0.15),
+                              color: AppColors.statusSoft(statusColor, isDark),
                             ),
                             child: Icon(
                               isReady
-                                  ? Icons.alarm_on_rounded
-                                  : Icons.warning_amber_rounded,
+                                  ? Icons.verified_user_rounded
+                                  : Icons.gpp_maybe_rounded,
                               color: statusColor,
-                              size: 22,
+                              size: 20,
                             ),
                           ),
                           const SizedBox(width: 14),
@@ -171,7 +277,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Alarm Jam Weker',
+                                  'Status Izin Alarm',
                                   style: TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w700,
@@ -181,8 +287,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 const SizedBox(height: 2),
                                 Text(
                                   isReady
-                                      ? 'Optimal & aktif di sistem Android'
-                                      : '${status.issueCount} izin HP perlu diaktifkan (Tap di sini)',
+                                      ? 'Semua izin aktif'
+                                      : '${status.issueCount} izin perlu diaktifkan',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: isReady ? textMuted : statusColor,
@@ -198,14 +304,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: statusColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(8),
+                              color: AppColors.statusSoft(statusColor, isDark),
+                              borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              isReady ? 'READY' : 'PERIKSA',
+                              isReady ? 'AKTIF' : 'PERIKSA',
                               style: TextStyle(
                                 fontSize: 10,
-                                fontWeight: FontWeight.w900,
+                                fontWeight: FontWeight.w800,
                                 color: statusColor,
                               ),
                             ),
@@ -218,11 +324,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 12),
 
-              // Kartu Pilihan & Upload Suara Alarm
+              // Kartu Pilihan & Upload Suara Alarm (Bebas Violet, Tegas Netral & Cobalt)
               Container(
                 decoration: BoxDecoration(
                   color: cardBg,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: borderColor),
                 ),
                 padding: const EdgeInsets.all(16),
@@ -235,12 +341,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: const Color(0xFFA259FF).withValues(alpha: 0.15),
+                            color: AppColors.surfaceSubtle(isDark),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.music_note_rounded,
-                            color: Color(0xFFA259FF),
-                            size: 22,
+                            color: accentColor,
+                            size: 20,
                           ),
                         ),
                         const SizedBox(width: 14),
@@ -249,7 +355,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Nada Suara Alarm',
+                                'Suara Alarm',
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
@@ -264,10 +370,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     soundName,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
-                                      color: Color(0xFFA259FF),
+                                      color: accentColor,
                                     ),
                                   );
                                 },
@@ -286,13 +392,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
                                   color: isPlaying
-                                      ? const Color(0xFFFF5252).withValues(alpha: 0.15)
-                                      : const Color(0xFF388AF6).withValues(alpha: 0.15),
+                                      ? AppColors.statusSoft(AppColors.danger, isDark)
+                                      : AppColors.accentSoft(isDark),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(
                                   isPlaying ? Icons.stop_rounded : Icons.play_arrow_rounded,
-                                  color: isPlaying ? const Color(0xFFFF5252) : const Color(0xFF388AF6),
+                                  color: isPlaying ? AppColors.danger : accentColor,
                                   size: 20,
                                 ),
                               ),
@@ -302,7 +408,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ],
                     ),
                     const SizedBox(height: 14),
-                    const Divider(height: 1),
+                    Divider(height: 1, color: borderColor),
                     const SizedBox(height: 12),
 
                     // Tombol Upload / Pilih File Audio Sendiri
@@ -311,11 +417,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         Expanded(
                           child: OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF388AF6),
-                              side: const BorderSide(color: Color(0xFF388AF6)),
+                              foregroundColor: textMain,
+                              backgroundColor: AppColors.surfaceSubtle(isDark),
+                              side: BorderSide(color: borderColor),
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
+                                borderRadius: BorderRadius.circular(10),
                               ),
                             ),
                             onPressed: () async {
@@ -323,7 +430,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               if (success && context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    backgroundColor: const Color(0xFF1E272E),
+                                    backgroundColor: cardBg,
                                     behavior: SnackBarBehavior.floating,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
@@ -331,13 +438,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     content: Row(
                                       children: [
                                         const Icon(Icons.check_circle_rounded,
-                                            color: Color(0xFF1DD1A1), size: 20),
+                                            color: AppColors.success, size: 20),
                                         const SizedBox(width: 10),
                                         Expanded(
                                           child: Text(
-                                            'Suara alarm diubah ke: ${AlarmSoundService.instance.currentSoundName}',
-                                            style: const TextStyle(
-                                                color: Colors.white, fontWeight: FontWeight.w600),
+                                            'Suara alarm: ${AlarmSoundService.instance.currentSoundName}',
+                                            style: TextStyle(
+                                                color: textMain, fontWeight: FontWeight.w600),
                                           ),
                                         ),
                                       ],
@@ -346,9 +453,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 );
                               }
                             },
-                            icon: const Icon(Icons.upload_file_rounded, size: 18),
+                            icon: Icon(Icons.upload_file_rounded, size: 18, color: accentColor),
                             label: const Text(
-                              'Pilih Audio Sendiri',
+                              'Pilih Audio',
                               style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                             ),
                           ),
@@ -370,14 +477,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        backgroundColor: const Color(0xFF1E272E),
+                                        backgroundColor: cardBg,
                                         behavior: SnackBarBehavior.floating,
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(12),
                                         ),
-                                        content: const Text(
-                                          'Suara alarm dikembalikan ke default.',
-                                          style: TextStyle(color: Colors.white),
+                                        content: Text(
+                                          'Suara default dipulihkan.',
+                                          style: TextStyle(color: textMain),
                                         ),
                                       ),
                                     );
@@ -393,7 +500,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Mendukung MP3, WAV, AAC, M4A dari memori HP. File akan disimpan aman di internal aplikasi.',
+                      'Format yang didukung: MP3, WAV, AAC, M4A',
                       style: TextStyle(
                         fontSize: 11,
                         color: textMuted,
@@ -413,7 +520,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: cardBg,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: borderColor),
                 ),
                 padding: const EdgeInsets.all(18),
@@ -423,7 +530,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Row(
                       children: [
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                           child: Image.asset(
                             'assets/icon/app_icon.png',
                             width: 44,
@@ -439,12 +546,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               'ValezPlan',
                               style: TextStyle(
                                 fontSize: 17,
-                                fontWeight: FontWeight.w900,
+                                fontWeight: FontWeight.w800,
                                 color: textMain,
                               ),
                             ),
                             Text(
-                              'Versi 1.0.0 (Personal Edition)',
+                              'Versi 1.1.0',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: textMuted,
@@ -456,7 +563,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(height: 14),
                     Text(
-                      'Aplikasi daily planner & alarm pribadi yang dirancang khusus untuk Valez dengan Structured Timeline style dan offline SQLite storage.',
+                      'Daily planner & alarm harian berbasis timeline.',
                       style: TextStyle(
                         fontSize: 13,
                         height: 1.4,

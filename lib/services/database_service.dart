@@ -3,10 +3,18 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import '../models/plan_model.dart';
 import 'alarm_service.dart';
+import 'tolerance_service.dart';
 
 class DatabaseService {
   static final DatabaseService instance = DatabaseService._init();
   static Database? _database;
+
+  // Notifier global untuk memicu auto-refresh di Timeline saat data agenda berubah
+  static final ValueNotifier<int> plansUpdateNotifier = ValueNotifier<int>(0);
+
+  static void notifyPlansUpdated() {
+    plansUpdateNotifier.value++;
+  }
 
   // In-memory fallback untuk testing di Web browser (Chrome)
   final List<PlanModel> _inMemoryPlans = [];
@@ -26,9 +34,15 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
+      onOpen: (db) async {
+        // Indeks SQLite untuk optimasi kecepatan query & bebas lag di HP spesifikasi rendah
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_plans_scheduled_time ON plans(scheduled_time)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_plans_is_completed ON plans(is_completed)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_plans_repeat ON plans(repeat_type)');
+      },
     );
   }
 
@@ -53,6 +67,11 @@ class DatabaseService {
         value TEXT NOT NULL
       )
     ''');
+
+    // Buat indeks langsung saat database pertama kali dibuat
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_plans_scheduled_time ON plans(scheduled_time)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_plans_is_completed ON plans(is_completed)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_plans_repeat ON plans(repeat_type)');
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -70,6 +89,11 @@ class DatabaseService {
         )
       ''');
     }
+    if (oldVersion < 5) {
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_plans_scheduled_time ON plans(scheduled_time)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_plans_is_completed ON plans(is_completed)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_plans_repeat ON plans(repeat_type)');
+    }
   }
 
   // Tambah jadwal baru dan mengembalikan ID dari database
@@ -78,20 +102,13 @@ class DatabaseService {
       final assignedId = _nextWebId++;
       final savedPlan = plan.copyWith(id: assignedId);
       _inMemoryPlans.add(savedPlan);
+      notifyPlansUpdated();
       return assignedId;
     }
     final db = await database;
-    return await db.insert('plans', plan.toMap());
-  }
-
-  // Tambah sekumpulan jadwal sekaligus (misal dari template rutinitas)
-  Future<List<int>> insertMultiplePlans(List<PlanModel> plans) async {
-    final List<int> ids = [];
-    for (final plan in plans) {
-      final id = await insertPlan(plan);
-      ids.add(id);
-    }
-    return ids;
+    final res = await db.insert('plans', plan.toMap());
+    notifyPlansUpdated();
+    return res;
   }
 
   // Sinkronisasi otomatis jadwal berulang (rutinitas) ke tanggal yang dibuka
@@ -238,29 +255,38 @@ class DatabaseService {
     return result.map((map) => PlanModel.fromMap(map)).toList();
   }
 
-  // Ambil semua riwayat: jadwal yang sudah dilaksanakan (selesai) atau jadwal yang sudah lewat
+  // Ambil semua riwayat: jadwal yang sudah dilaksanakan (selesai) ATAU jadwal yang sudah lewat batas toleransi
   Future<List<PlanModel>> getHistoryPlans() async {
     final now = DateTime.now();
+    List<PlanModel> allCandidates;
 
     if (kIsWeb) {
-      final past = _inMemoryPlans
-          .where((p) => p.isCompleted || p.scheduledTime.isBefore(now))
-          .toList();
-      past.sort((a, b) => b.scheduledTime.compareTo(a.scheduledTime));
-      return past;
+      allCandidates = List.from(_inMemoryPlans);
+    } else {
+      final db = await database;
+      // Ambil jadwal yang selesai atau jadwal dari awal waktu sampai akhir hari ini
+      final endOfToday = DateTime(now.year, now.month, now.day, 23, 59, 59).toIso8601String();
+      final result = await db.query(
+        'plans',
+        where: 'is_completed = 1 OR scheduled_time <= ?',
+        whereArgs: [endOfToday],
+        orderBy: 'scheduled_time DESC',
+        limit: 150,
+      );
+      allCandidates = result.map((map) => PlanModel.fromMap(map)).toList();
     }
 
-    final db = await database;
-    // Jadwal yang sudah dilaksanakan (is_completed = 1) langsung masuk history,
-    // begitu juga jadwal masa lalu yang sudah lewat.
-    final result = await db.query(
-      'plans',
-      where: 'is_completed = 1 OR scheduled_time < ?',
-      whereArgs: [now.toIso8601String()],
-      orderBy: 'scheduled_time DESC',
-    );
+    // Riwayat HANYA berisi:
+    // 1. Jadwal yang SUDAH SELESAI (isCompleted == true)
+    // 2. Jadwal yang BENAR-BENAR TERLEWAT batas toleransi (isPlanExpired == true)
+    // Jadwal yang BELUM SELESAI dan MASIH DALAM WAKTU TOLERANSI (aktif) TIDAK BOLEH masuk ke riwayat!
+    final history = allCandidates.where((p) {
+      if (p.isCompleted) return true;
+      return ToleranceService.instance.isPlanExpired(p);
+    }).toList();
 
-    return result.map((map) => PlanModel.fromMap(map)).toList();
+    history.sort((a, b) => b.scheduledTime.compareTo(a.scheduledTime));
+    return history;
   }
 
   // Hapus semua riwayat yang sudah selesai
@@ -326,18 +352,21 @@ class DatabaseService {
       final index = _inMemoryPlans.indexWhere((p) => p.id == plan.id);
       if (index != -1) {
         _inMemoryPlans[index] = plan;
+        notifyPlansUpdated();
         return 1;
       }
       return 0;
     }
 
     final db = await database;
-    return await db.update(
+    final res = await db.update(
       'plans',
       plan.toMap(),
       where: 'id = ?',
       whereArgs: [plan.id],
     );
+    notifyPlansUpdated();
+    return res;
   }
 
   // Update status checklist (selesai / belum)
@@ -346,33 +375,39 @@ class DatabaseService {
       final index = _inMemoryPlans.indexWhere((p) => p.id == id);
       if (index != -1) {
         _inMemoryPlans[index] = _inMemoryPlans[index].copyWith(isCompleted: isCompleted);
+        notifyPlansUpdated();
         return 1;
       }
       return 0;
     }
 
     final db = await database;
-    return await db.update(
+    final res = await db.update(
       'plans',
       {'is_completed': isCompleted ? 1 : 0},
       where: 'id = ?',
       whereArgs: [id],
     );
+    notifyPlansUpdated();
+    return res;
   }
 
   // Hapus jadwal
   Future<int> deletePlan(int id) async {
     if (kIsWeb) {
       _inMemoryPlans.removeWhere((p) => p.id == id);
+      notifyPlansUpdated();
       return 1;
     }
 
     final db = await database;
-    return await db.delete(
+    final res = await db.delete(
       'plans',
       where: 'id = ?',
       whereArgs: [id],
     );
+    notifyPlansUpdated();
+    return res;
   }
 
   // Simpan pengaturan aplikasi (key-value)

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/system_permission_service.dart';
+import '../theme/app_colors.dart';
 
 class PermissionWarningSheet extends StatefulWidget {
   const PermissionWarningSheet({super.key});
@@ -42,6 +43,7 @@ class _PermissionWarningSheetState extends State<PermissionWarningSheet>
 
   Widget _buildPermissionItem({
     required BuildContext context,
+    required bool isDark,
     required String title,
     required String description,
     required IconData icon,
@@ -52,13 +54,18 @@ class _PermissionWarningSheetState extends State<PermissionWarningSheet>
     required Color textMain,
     required Color textMuted,
   }) {
+    final statusColor = isGranted ? AppColors.success : AppColors.warning;
+    final accentColor = AppColors.accent(isDark);
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: cardBg,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isGranted ? borderColor : const Color(0xFFFF9F43).withValues(alpha: 0.3),
+          color: isGranted
+              ? borderColor
+              : AppColors.statusBorder(AppColors.warning, isDark),
         ),
       ),
       child: Row(
@@ -68,14 +75,12 @@ class _PermissionWarningSheetState extends State<PermissionWarningSheet>
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isGranted
-                  ? const Color(0xFF1DD1A1).withValues(alpha: 0.15)
-                  : const Color(0xFFFF9F43).withValues(alpha: 0.15),
+              color: AppColors.statusSoft(statusColor, isDark),
             ),
             child: Icon(
               isGranted ? Icons.check_circle_rounded : icon,
-              color: isGranted ? const Color(0xFF1DD1A1) : const Color(0xFFFF9F43),
-              size: 22,
+              color: statusColor,
+              size: 20,
             ),
           ),
           const SizedBox(width: 12),
@@ -98,19 +103,15 @@ class _PermissionWarningSheetState extends State<PermissionWarningSheet>
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: isGranted
-                            ? const Color(0xFF1DD1A1).withValues(alpha: 0.15)
-                            : const Color(0xFFFF9F43).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
+                        color: AppColors.statusSoft(statusColor, isDark),
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         isGranted ? 'AKTIF' : 'BELUM AKTIF',
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w800,
-                          color: isGranted
-                              ? const Color(0xFF1DD1A1)
-                              : const Color(0xFFFF9F43),
+                          color: statusColor,
                         ),
                       ),
                     ),
@@ -127,17 +128,17 @@ class _PermissionWarningSheetState extends State<PermissionWarningSheet>
                     height: 34,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF388AF6),
+                        backgroundColor: accentColor,
                         foregroundColor: Colors.white,
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(horizontal: 14),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
                       onPressed: onRequest,
                       child: const Text(
-                        'Aktifkan Izin',
+                        'Aktifkan',
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                       ),
                     ),
@@ -154,11 +155,12 @@ class _PermissionWarningSheetState extends State<PermissionWarningSheet>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF1E272E) : Colors.white;
-    final cardBg = isDark ? const Color(0xFF14171A) : const Color(0xFFF7F9FC);
-    final textMain = isDark ? Colors.white : const Color(0xFF2D3748);
-    final textMuted = isDark ? const Color(0xFF808E9B) : const Color(0xFF718096);
-    final borderColor = isDark ? const Color(0xFF2D3436) : const Color(0xFFE2E8F0);
+    final bg = AppColors.surface(isDark);
+    final cardBg = AppColors.bg(isDark);
+    final textMain = AppColors.ink(isDark);
+    final textMuted = AppColors.muted(isDark);
+    final borderColor = AppColors.border(isDark);
+    final accentColor = AppColors.accent(isDark);
 
     return ValueListenableBuilder<SystemPermissionStatus>(
       valueListenable: SystemPermissionService.instance.statusNotifier,
@@ -166,7 +168,7 @@ class _PermissionWarningSheetState extends State<PermissionWarningSheet>
         return Container(
           decoration: BoxDecoration(
             color: bg,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           constraints: BoxConstraints(
             maxHeight: MediaQuery.of(context).size.height * 0.88,
@@ -194,13 +196,13 @@ class _PermissionWarningSheetState extends State<PermissionWarningSheet>
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFF9F43).withValues(alpha: 0.15),
+                      color: AppColors.statusSoft(AppColors.warning, isDark),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.security_rounded,
-                      color: Color(0xFFFF9F43),
-                      size: 24,
+                      color: AppColors.warning,
+                      size: 22,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -209,7 +211,7 @@ class _PermissionWarningSheetState extends State<PermissionWarningSheet>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Optimalkan Pengaturan HP',
+                          'Izin Sistem',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
@@ -217,7 +219,7 @@ class _PermissionWarningSheetState extends State<PermissionWarningSheet>
                           ),
                         ),
                         Text(
-                          'Agar alarm tidak terblokir saat HP terkunci',
+                          'Diperlukan agar alarm berdering saat layar mati',
                           style: TextStyle(fontSize: 12, color: textMuted),
                         ),
                       ],
@@ -237,9 +239,10 @@ class _PermissionWarningSheetState extends State<PermissionWarningSheet>
                   children: [
                     _buildPermissionItem(
                       context: context,
-                      title: 'Izin Notifikasi',
+                      isDark: isDark,
+                      title: 'Notifikasi',
                       description:
-                          'Wajib agar layar alarm weker dan pengingat waktu persiapan bisa muncul di layar HP.',
+                          'Menampilkan alarm dan pengingat di layar HP.',
                       icon: Icons.notifications_active_rounded,
                       isGranted: status.isNotificationGranted,
                       onRequest: () =>
@@ -252,9 +255,10 @@ class _PermissionWarningSheetState extends State<PermissionWarningSheet>
                     const SizedBox(height: 10),
                     _buildPermissionItem(
                       context: context,
-                      title: 'Izin Alarm Presisi (Exact)',
+                      isDark: isDark,
+                      title: 'Alarm Presisi',
                       description:
-                          'Memastikan alarm berdering tepat di detik dan menit yang ditentukan tanpa ditunda Android.',
+                          'Memastikan alarm berdering tepat waktu tanpa delay.',
                       icon: Icons.alarm_rounded,
                       isGranted: status.isExactAlarmGranted,
                       onRequest: () =>
@@ -267,9 +271,10 @@ class _PermissionWarningSheetState extends State<PermissionWarningSheet>
                     const SizedBox(height: 10),
                     _buildPermissionItem(
                       context: context,
-                      title: 'Bebaskan dari Penghemat Baterai',
+                      isDark: isDark,
+                      title: 'Optimasi Baterai',
                       description:
-                          'Mencegah sistem Android mematikan proses ValezPlan saat HP sedang sleep/layar mati.',
+                          'Mencegah sistem mematikan alarm saat HP sleep.',
                       icon: Icons.battery_charging_full_rounded,
                       isGranted: status.isBatteryOptimizationIgnored,
                       onRequest: () => SystemPermissionService.instance
@@ -285,18 +290,18 @@ class _PermissionWarningSheetState extends State<PermissionWarningSheet>
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF388AF6).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(16),
+                        color: AppColors.accentSoft(isDark),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: const Color(0xFF388AF6).withValues(alpha: 0.25),
+                          color: AppColors.accentBorder(isDark),
                         ),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.lightbulb_rounded,
-                            color: Color(0xFF388AF6),
+                            color: accentColor,
                             size: 20,
                           ),
                           const SizedBox(width: 10),
@@ -305,7 +310,7 @@ class _PermissionWarningSheetState extends State<PermissionWarningSheet>
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Tips Khusus Xiaomi / Redmi / MIUI:',
+                                  'Pengguna MIUI / HyperOS:',
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
@@ -314,9 +319,7 @@ class _PermissionWarningSheetState extends State<PermissionWarningSheet>
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Di menu Pengaturan Aplikasi HP kamu, pastikan:\n'
-                                  '• Aktifkan opsi "Mulai Otomatis" (Autostart)\n'
-                                  '• Penghemat baterai: pilih "Tidak Ada Pembatasan"',
+                                  '• Aktifkan opsi "Mulai Otomatis"\n• Hemat baterai: pilih "Tidak Ada Pembatasan"',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: textMuted,
@@ -338,22 +341,22 @@ class _PermissionWarningSheetState extends State<PermissionWarningSheet>
               // Tombol Buka Pengaturan HP Lengkap
               SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: 48,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF388AF6),
+                    backgroundColor: accentColor,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   onPressed: () =>
                       SystemPermissionService.instance.openAppSettingsPage(),
                   icon: const Icon(Icons.settings_rounded, size: 20),
                   label: const Text(
-                    'Buka Pengaturan Aplikasi HP',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                    'Buka Pengaturan HP',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
@@ -362,7 +365,7 @@ class _PermissionWarningSheetState extends State<PermissionWarningSheet>
                 child: TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: Text(
-                    status.hasAnyIssue ? 'Tutup Sementara' : 'Selesai, Semua Izin Siap!',
+                    status.hasAnyIssue ? 'Tutup' : 'Selesai',
                     style: TextStyle(
                       color: textMuted,
                       fontWeight: FontWeight.w700,

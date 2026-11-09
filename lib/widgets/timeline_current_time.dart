@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../theme/app_colors.dart';
 
 class TimelineCurrentTimeIndicator extends StatefulWidget {
   const TimelineCurrentTimeIndicator({super.key});
@@ -34,7 +35,7 @@ class _TimelineCurrentTimeIndicatorState
   Widget build(BuildContext context) {
     final timeStr = DateFormat('HH:mm').format(_now);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const accentColor = Color(0xFF388AF6); // Valez Blue yang selaras dan profesional
+    final accentColor = AppColors.accent(isDark);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -46,7 +47,7 @@ class _TimelineCurrentTimeIndicatorState
             child: Text(
               timeStr,
               textAlign: TextAlign.right,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
                 color: accentColor,
@@ -60,7 +61,7 @@ class _TimelineCurrentTimeIndicatorState
           Container(
             width: 8,
             height: 8,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: accentColor,
             ),
@@ -71,11 +72,11 @@ class _TimelineCurrentTimeIndicatorState
           Expanded(
             child: Container(
               height: 1.5,
-              color: accentColor.withValues(alpha: isDark ? 0.4 : 0.6),
+              color: accentColor.withValues(alpha: isDark ? 0.45 : 0.6),
             ),
           ),
           const SizedBox(width: 8),
-          const Text(
+          Text(
             'SEKARANG',
             style: TextStyle(
               fontSize: 9,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../theme/app_colors.dart';
 
 class DaySelectorBar extends StatelessWidget {
   final DateTime selectedDate;
@@ -15,9 +16,10 @@ class DaySelectorBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final unselectedBg = isDark ? const Color(0xFF1E272E) : Colors.white;
-    final unselectedBorder = isDark ? Colors.transparent : const Color(0xFFE2E8F0);
-    final unselectedNumColor = isDark ? Colors.white : const Color(0xFF2D3748);
+    final unselectedBg = AppColors.surface(isDark);
+    final unselectedBorder = AppColors.border(isDark);
+    final unselectedNumColor = AppColors.ink(isDark);
+    final accentColor = AppColors.accent(isDark);
 
     // Tampilkan 7 hari: 2 hari kemarin, hari ini, dan 4 hari ke depan
     final days = List.generate(7, (i) {
@@ -49,17 +51,15 @@ class DaySelectorBar extends StatelessWidget {
               margin: const EdgeInsets.only(right: 8),
               width: 52,
               decoration: BoxDecoration(
-                color: isSelected
-                    ? const Color(0xFF388AF6)
-                    : unselectedBg,
-                borderRadius: BorderRadius.circular(16),
+                color: isSelected ? accentColor : unselectedBg,
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isSelected
-                      ? const Color(0xFF388AF6)
+                      ? accentColor
                       : isToday
-                          ? const Color(0xFF388AF6).withValues(alpha: 0.5)
+                          ? AppColors.accentBorder(isDark)
                           : unselectedBorder,
-                  width: 1.2,
+                  width: 1,
                 ),
               ),
               child: Column(
@@ -73,7 +73,7 @@ class DaySelectorBar extends StatelessWidget {
                       letterSpacing: 0.5,
                       color: isSelected
                           ? Colors.white
-                          : const Color(0xFF808E9B),
+                          : AppColors.muted(isDark),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -81,7 +81,7 @@ class DaySelectorBar extends StatelessWidget {
                     dayNum,
                     style: TextStyle(
                       fontSize: 18,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w800,
                       color: isSelected ? Colors.white : unselectedNumColor,
                     ),
                   ),
@@ -92,7 +92,7 @@ class DaySelectorBar extends StatelessWidget {
                       height: 5,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: isSelected ? Colors.white : const Color(0xFF388AF6),
+                        color: isSelected ? Colors.white : accentColor,
                       ),
                     ),
                 ],

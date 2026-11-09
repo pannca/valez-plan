@@ -3,14 +3,15 @@ import 'package:intl/intl.dart';
 import '../models/plan_model.dart';
 import '../services/database_service.dart';
 import '../services/alarm_service.dart';
+import '../theme/app_colors.dart';
 import '../widgets/plan_card.dart';
 import '../widgets/timeline_current_time.dart';
 import '../widgets/timeline_gap_item.dart';
 import '../widgets/day_selector_bar.dart';
 import '../services/system_permission_service.dart';
+import '../services/tolerance_service.dart';
 import '../widgets/permission_warning_sheet.dart';
 import 'add_plan_sheet.dart';
-import 'routine_template_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,6 +29,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    ToleranceService.instance.toleranceMinutesNotifier.addListener(_onToleranceChanged);
+    DatabaseService.plansUpdateNotifier.addListener(_onDatabasePlansUpdated);
     _loadPlansForDate(_selectedDate);
 
     // Cek izin sistem HP saat aplikasi terbuka, munculkan pop-up otomatis jika ada yang belum aktif
@@ -39,8 +42,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
+  void _onToleranceChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _onDatabasePlansUpdated() {
+    if (mounted) {
+      _loadPlansForDate(_selectedDate);
+    }
+  }
+
   @override
   void dispose() {
+    DatabaseService.plansUpdateNotifier.removeListener(_onDatabasePlansUpdated);
+    ToleranceService.instance.toleranceMinutesNotifier.removeListener(_onToleranceChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -73,6 +88,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _toggleComplete(PlanModel plan, bool value) async {
     if (plan.id == null) return;
+    if (value && ToleranceService.instance.isPlanExpired(plan)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Jadwal telah terlewat dan terkunci.'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    if (!value) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Jadwal sudah selesai dan terkunci.'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
     await DatabaseService.instance.toggleComplete(plan.id!, value);
     _loadPlansForDate(_selectedDate);
   }
@@ -87,12 +122,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _openAddPlanSheet() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF1E272E),
+      backgroundColor: AppColors.surface(isDark),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => AddPlanSheet(
         initialDate: _selectedDate,
@@ -102,12 +138,33 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _openEditPlanSheet(PlanModel plan) {
+    if (plan.isCompleted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Jadwal sudah selesai dan tidak dapat diedit.'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    if (ToleranceService.instance.isPlanExpired(plan)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Jadwal telah terlewat dan tidak dapat diedit.'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF1E272E),
+      backgroundColor: AppColors.surface(isDark),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => AddPlanSheet(
         initialDate: plan.scheduledTime,
@@ -117,83 +174,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  void _openTemplateSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => RoutineTemplateSheet(
-        targetDate: _selectedDate,
-        hasExistingPlans: _plans.isNotEmpty,
-        onTemplateApplied: () => _loadPlansForDate(_selectedDate),
-      ),
-    );
-  }
-
   bool _isToday(DateTime date) {
     final now = DateTime.now();
     return date.year == now.year &&
         date.month == now.month &&
         date.day == now.day;
-  }
-
-  Widget _buildTodayStreakStatus(int completedCount) {
-    final now = DateTime.now();
-    final isWeekend = now.weekday == DateTime.saturday || now.weekday == DateTime.sunday;
-
-    Color bgColor;
-    Color textColor;
-    IconData icon;
-    String text;
-
-    if (isWeekend) {
-      bgColor = const Color(0xFF00CEC9).withValues(alpha: 0.12);
-      textColor = const Color(0xFF00CEC9);
-      icon = Icons.battery_charging_full_rounded;
-      text = completedCount > 0
-          ? 'Weekend Bonus: +$completedCount agenda beres 🔋'
-          : 'Weekend Recharge • Streak aman tanpa beban 🔋';
-    } else if (completedCount > 0) {
-      bgColor = const Color(0xFF1DD1A1).withValues(alpha: 0.12);
-      textColor = const Color(0xFF1DD1A1);
-      icon = Icons.local_fire_department_rounded;
-      text = 'Api Hari Ini Menyala! ($completedCount selesai) 🔥';
-    } else {
-      final isEvening = now.hour >= 17;
-      bgColor = (isEvening ? const Color(0xFFFF5252) : const Color(0xFFFF9F43)).withValues(alpha: 0.12);
-      textColor = isEvening ? const Color(0xFFFF5252) : const Color(0xFFFF9F43);
-      icon = isEvening ? Icons.warning_amber_rounded : Icons.local_fire_department_rounded;
-      text = isEvening
-          ? 'Api Terancam Padam! Selesaikan minimal 1 kegiatan'
-          : 'Senin - Jumat: Selesaikan 1 kegiatan untuk api 🔥';
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 13, color: textColor),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: textColor,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   List<Widget> _buildTimelineWidgets() {
@@ -246,22 +231,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final completedCount = _plans.where((p) => p.isCompleted).length;
     final dateStr = DateFormat('EEEE, d MMMM').format(_selectedDate);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textMain = isDark ? Colors.white : const Color(0xFF2D3748);
-    final textMuted = isDark ? const Color(0xFF808E9B) : const Color(0xFF718096);
-    final cardBg = isDark ? const Color(0xFF1E272E) : Colors.white;
-    final borderColor = isDark ? const Color(0xFF2D3436) : const Color(0xFFE2E8F0);
+    final textMain = AppColors.ink(isDark);
+    final textMuted = AppColors.muted(isDark);
+    final cardBg = AppColors.surface(isDark);
+    final borderColor = AppColors.border(isDark);
+    final accentColor = AppColors.accent(isDark);
 
     return Scaffold(
       body: SafeArea(
         child: _isLoading
-            ? const Center(
+            ? Center(
                 child: CircularProgressIndicator(
-                  color: Color(0xFF388AF6),
+                  color: accentColor,
                   strokeWidth: 2,
                 ),
               )
             : RefreshIndicator(
-                color: const Color(0xFF388AF6),
+                color: accentColor,
                 backgroundColor: cardBg,
                 onRefresh: () => _loadPlansForDate(_selectedDate),
                 child: SingleChildScrollView(
@@ -284,132 +270,59 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 'Timeline',
                                 style: TextStyle(
                                   fontSize: 30,
-                                  fontWeight: FontWeight.w900,
+                                  fontWeight: FontWeight.w800,
                                   color: textMain,
                                   letterSpacing: -0.5,
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              Row(
+                              Text(
+                                dateStr,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (_plans.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 7),
+                              decoration: BoxDecoration(
+                                color: cardBg,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: borderColor,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
+                                  Icon(
+                                    completedCount == _plans.length
+                                        ? Icons.check_circle_rounded
+                                        : Icons.task_alt_rounded,
+                                    size: 13,
+                                    color: completedCount == _plans.length
+                                        ? AppColors.success
+                                        : accentColor,
+                                  ),
+                                  const SizedBox(width: 5),
                                   Text(
-                                    dateStr,
+                                    '$completedCount / ${_plans.length}',
                                     style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: textMuted,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      color: textMain,
                                     ),
                                   ),
-                                  if (!_isToday(_selectedDate)) ...[
-                                    const SizedBox(width: 8),
-                                    GestureDetector(
-                                      onTap: () {
-                                        final today = DateTime.now();
-                                        setState(() => _selectedDate = today);
-                                        _loadPlansForDate(today);
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF388AF6)
-                                              .withValues(alpha: 0.15),
-                                          borderRadius:
-                                              BorderRadius.circular(6),
-                                        ),
-                                        child: const Text(
-                                          'Ke Hari Ini',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w800,
-                                            color: Color(0xFF388AF6),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
                                 ],
                               ),
-                            ],
-                          ),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Tombol Template Rutinitas Cepat
-                              InkWell(
-                                onTap: _openTemplateSheet,
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 7),
-                                  decoration: BoxDecoration(
-                                    color: cardBg,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: borderColor),
-                                  ),
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.bolt_rounded,
-                                          color: Color(0xFF388AF6), size: 18),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        'Template',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w800,
-                                          color: Color(0xFF388AF6),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              if (_plans.isNotEmpty) ...[
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 7),
-                                  decoration: BoxDecoration(
-                                    color: cardBg,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: borderColor,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        completedCount == _plans.length
-                                            ? Icons.check_circle_rounded
-                                            : Icons.task_alt_rounded,
-                                        size: 13,
-                                        color: const Color(0xFF388AF6),
-                                      ),
-                                      const SizedBox(width: 5),
-                                      Text(
-                                        '$completedCount / ${_plans.length}',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w800,
-                                          color: textMain,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
+                            ),
                         ],
                       ),
-
-                      // Status Api Streak / Weekend Recharge Hari Ini (Baris tersendiri lega & bebas overflow)
-                      if (_isToday(_selectedDate)) ...[
-                        const SizedBox(height: 10),
-                        _buildTodayStreakStatus(completedCount),
-                      ],
 
                       // Banner Peringatan Izin Sistem HP jika ada yang belum aktif
                       ValueListenableBuilder<SystemPermissionStatus>(
@@ -424,20 +337,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 14, vertical: 10),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFF9F43)
-                                  .withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(16),
+                              color: AppColors.statusSoft(AppColors.warning, isDark),
+                              borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: const Color(0xFFFF9F43)
-                                    .withValues(alpha: 0.35),
+                                color: AppColors.statusBorder(AppColors.warning, isDark),
                               ),
                             ),
                             child: Row(
                               children: [
                                 const Icon(
                                   Icons.warning_amber_rounded,
-                                  color: Color(0xFFFF9F43),
-                                  size: 22,
+                                  color: AppColors.warning,
+                                  size: 20,
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(
@@ -446,15 +357,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        '${status.issueCount} Izin HP Perlu Diaktifkan',
+                                        '${status.issueCount} Izin Perlu Diaktifkan',
                                         style: TextStyle(
                                           color: textMain,
                                           fontSize: 13,
-                                          fontWeight: FontWeight.w800,
+                                          fontWeight: FontWeight.w700,
                                         ),
                                       ),
                                       Text(
-                                        'Agar alarm tidak terblokir saat HP sleep.',
+                                        'Agar alarm berdering saat HP terkunci.',
                                         style: TextStyle(
                                             color: textMuted, fontSize: 11),
                                       ),
@@ -463,14 +374,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 ),
                                 ElevatedButton(
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFFF9F43),
-                                    foregroundColor: Colors.black,
+                                    backgroundColor: accentColor,
+                                    foregroundColor: Colors.white,
                                     elevation: 0,
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 6),
+                                        horizontal: 12, vertical: 6),
                                     minimumSize: const Size(0, 32),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
                                   ),
                                   onPressed: () =>
@@ -478,7 +389,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   child: const Text(
                                     'Atur',
                                     style: TextStyle(
-                                        fontWeight: FontWeight.w800,
+                                        fontWeight: FontWeight.w700,
                                         fontSize: 12),
                                   ),
                                 ),
@@ -512,16 +423,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: cardBg,
+                                    border: Border.all(color: borderColor),
                                   ),
                                   child: Icon(
                                     Icons.route_rounded,
-                                    size: 48,
-                                    color: isDark ? const Color(0xFF485460) : const Color(0xFFA0AEC0),
+                                    size: 44,
+                                    color: textMuted,
                                   ),
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  'Timeline Masih Kosong',
+                                  'Belum Ada Jadwal',
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w700,
@@ -530,32 +442,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  'Atur agenda hari ini untuk mulai merancang harimu',
+                                  'Ketuk + untuk membuat jadwal baru',
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: textMuted,
-                                  ),
-                                ),
-                                const SizedBox(height: 18),
-                                OutlinedButton.icon(
-                                  onPressed: _openTemplateSheet,
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: const Color(0xFF388AF6),
-                                    side: const BorderSide(
-                                        color: Color(0xFF388AF6), width: 1.5),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 10),
-                                  ),
-                                  icon: const Icon(Icons.bolt_rounded, size: 18),
-                                  label: const Text(
-                                    'Pilih Template Rutinitas',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 13,
-                                    ),
                                   ),
                                 ),
                               ],
@@ -572,19 +462,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFF388AF6),
+        backgroundColor: accentColor,
         foregroundColor: Colors.white,
-        elevation: 4,
+        elevation: 2,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(14),
         ),
         icon: const Icon(Icons.add_rounded, size: 22),
         label: const Text(
           'Jadwal Baru',
           style: TextStyle(
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
             fontSize: 14,
-            letterSpacing: 0.3,
+            letterSpacing: 0.2,
           ),
         ),
         onPressed: _openAddPlanSheet,

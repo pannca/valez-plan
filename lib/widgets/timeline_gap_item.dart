@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 
 class TimelineGapItem extends StatelessWidget {
   final Duration duration;
@@ -9,30 +10,34 @@ class TimelineGapItem extends StatelessWidget {
     final hours = d.inHours;
     final mins = d.inMinutes.remainder(60);
     if (hours > 0 && mins > 0) {
-      return '$hours jam $mins mnt waktu luang';
+      return '$hours j $mins m jeda';
     } else if (hours > 0) {
-      return '$hours jam waktu luang';
+      return '$hours jam jeda';
     } else {
-      return '$mins mnt waktu luang';
+      return '$mins mnt jeda';
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final borderColor = AppColors.border(isDark);
+    final mutedColor = AppColors.muted(isDark);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           const SizedBox(width: 44),
           const SizedBox(width: 12),
-          // Garis putus-putus kecil di tengah
+          // Garis vertikal penghubung di tengah
           SizedBox(
             width: 36,
             child: Center(
               child: Container(
                 width: 2,
                 height: 28,
-                color: const Color(0xFF2D3436),
+                color: borderColor,
               ),
             ),
           ),
@@ -41,15 +46,16 @@ class TimelineGapItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: const Color(0xFF2D3436).withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(20),
+              color: AppColors.surfaceSubtle(isDark),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: borderColor),
             ),
             child: Text(
               _formatDuration(duration),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF808E9B),
+                color: mutedColor,
               ),
             ),
           ),

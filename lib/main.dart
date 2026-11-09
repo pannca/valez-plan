@@ -4,6 +4,8 @@ import 'services/alarm_service.dart';
 import 'services/alarm_sound_service.dart';
 import 'services/system_permission_service.dart';
 import 'services/theme_service.dart';
+import 'services/tolerance_service.dart';
+import 'theme/app_colors.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/alarm_ringing_screen.dart';
 
@@ -12,9 +14,11 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inisialisasi service Alarm, Suara, dan Izin Sistem
+  // Inisialisasi service Tema, Alarm, Suara, Toleransi Keterlambatan, dan Izin Sistem
+  await ThemeService.instance.init();
   await AlarmService.instance.init();
   await AlarmSoundService.instance.init();
+  await ToleranceService.instance.init();
   await SystemPermissionService.instance.checkPermissions();
 
   runApp(const ValezPlanApp());
@@ -62,21 +66,25 @@ class _ValezPlanAppState extends State<ValezPlanApp> {
           // Tema Terang (Light Mode)
           theme: ThemeData(
             brightness: Brightness.light,
-            scaffoldBackgroundColor: const Color(0xFFF5F6FA),
+            scaffoldBackgroundColor: AppColors.bgLight,
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF388AF6),
-              surface: Colors.white,
+              primary: AppColors.accentLight,
+              surface: AppColors.surfaceLight,
+              onSurface: AppColors.inkLight,
             ),
+            dividerColor: AppColors.borderLight,
             useMaterial3: true,
           ),
           // Tema Gelap (Dark Mode)
           darkTheme: ThemeData(
             brightness: Brightness.dark,
-            scaffoldBackgroundColor: const Color(0xFF14171A),
+            scaffoldBackgroundColor: AppColors.bgDark,
             colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF388AF6),
-              surface: Color(0xFF1E272E),
+              primary: AppColors.accentDark,
+              surface: AppColors.surfaceDark,
+              onSurface: AppColors.inkDark,
             ),
+            dividerColor: AppColors.borderDark,
             useMaterial3: true,
           ),
           home: const MainNavigationScreen(),
