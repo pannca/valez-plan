@@ -6,7 +6,6 @@ import '../services/alarm_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/plan_card.dart';
 import '../widgets/timeline_current_time.dart';
-import '../widgets/timeline_gap_item.dart';
 import '../widgets/day_selector_bar.dart';
 import '../services/system_permission_service.dart';
 import '../services/tolerance_service.dart';
@@ -194,15 +193,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (isToday && !insertedNowLine && now.isBefore(currentPlan.scheduledTime)) {
         widgets.add(const TimelineCurrentTimeIndicator());
         insertedNowLine = true;
-      }
-
-      // Sisipkan info waktu luang (Gap) jika ada jarak >= 45 menit dari jadwal sebelumnya
-      if (i > 0) {
-        final prevPlan = _plans[i - 1];
-        final gap = currentPlan.scheduledTime.difference(prevPlan.scheduledTime);
-        if (gap.inMinutes >= 45) {
-          widgets.add(TimelineGapItem(duration: gap));
-        }
       }
 
       // Kartu Jadwal Timeline
