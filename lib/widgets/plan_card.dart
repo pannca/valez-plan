@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/plan_model.dart';
+import '../services/language_service.dart';
 import '../services/tolerance_service.dart';
 import '../theme/app_colors.dart';
 
@@ -25,28 +26,33 @@ class PlanCard extends StatelessWidget {
   String _getTimeRemainingText(DateTime scheduledTime) {
     final now = DateTime.now();
     final diff = scheduledTime.difference(now);
+    final isEn = AppStrings.isEn;
 
     if (diff.isNegative) {
-      if (diff.inMinutes.abs() < 2) return 'Sekarang';
-      final isExpired = ToleranceService.instance.isPastToleranceDeadline(scheduledTime);
-      if (isExpired) return 'Terlewat';
-      if (diff.inMinutes.abs() < 60) return '${diff.inMinutes.abs()}m lalu';
+      if (diff.inMinutes.abs() < 2) return isEn ? 'Now' : 'Sekarang';
+      final isExpired =
+          ToleranceService.instance.isPastToleranceDeadline(scheduledTime);
+      if (isExpired) return isEn ? 'Overdue' : 'Terlewat';
+      if (diff.inMinutes.abs() < 60) {
+        return isEn ? '${diff.inMinutes.abs()}m ago' : '${diff.inMinutes.abs()}m lalu';
+      }
       final h = diff.inMinutes.abs() ~/ 60;
-      return '${h}j lalu';
+      return isEn ? '${h}h ago' : '${h}j lalu';
     }
 
     if (diff.inSeconds <= 60) {
-      return '1m lagi';
+      return isEn ? '1m left' : '1m lagi';
     } else if (diff.inMinutes < 60) {
-      return '${diff.inMinutes}m lagi';
+      return isEn ? '${diff.inMinutes}m left' : '${diff.inMinutes}m lagi';
     } else if (diff.inHours < 24 && scheduledTime.day == now.day) {
-      return '${diff.inHours}j lagi';
+      return isEn ? '${diff.inHours}h left' : '${diff.inHours}j lagi';
     } else {
-      final daysDiff = DateTime(scheduledTime.year, scheduledTime.month, scheduledTime.day)
+      final daysDiff = DateTime(
+              scheduledTime.year, scheduledTime.month, scheduledTime.day)
           .difference(DateTime(now.year, now.month, now.day))
           .inDays;
-      if (daysDiff == 1) return 'Besok';
-      return '$daysDiff hr lagi';
+      if (daysDiff == 1) return isEn ? 'Tomorrow' : 'Besok';
+      return isEn ? '$daysDiff d left' : '$daysDiff hr lagi';
     }
   }
 
@@ -142,9 +148,9 @@ class PlanCard extends StatelessWidget {
                     onTap: () {
                       if (isExpired) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Jadwal telah terlewat dan terkunci.'),
-                            duration: Duration(seconds: 2),
+                          SnackBar(
+                            content: Text(AppStrings.planOverdueLocked),
+                            duration: const Duration(seconds: 2),
                             behavior: SnackBarBehavior.floating,
                           ),
                         );
@@ -152,9 +158,9 @@ class PlanCard extends StatelessWidget {
                       }
                       if (plan.isCompleted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Jadwal sudah selesai dan terkunci.'),
-                            duration: Duration(seconds: 2),
+                          SnackBar(
+                            content: Text(AppStrings.planCompletedLocked),
+                            duration: const Duration(seconds: 2),
                             behavior: SnackBarBehavior.floating,
                           ),
                         );
@@ -199,9 +205,11 @@ class PlanCard extends StatelessWidget {
                 onTap: () {
                   if (plan.isCompleted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Jadwal sudah selesai dan tidak dapat diedit.'),
-                        duration: Duration(seconds: 2),
+                      SnackBar(
+                        content: Text(AppStrings.isEn
+                            ? 'This plan is completed and cannot be edited.'
+                            : 'Jadwal sudah selesai dan tidak dapat diedit.'),
+                        duration: const Duration(seconds: 2),
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
@@ -209,9 +217,11 @@ class PlanCard extends StatelessWidget {
                   }
                   if (isExpired) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Jadwal telah terlewat dan tidak dapat diedit.'),
-                        duration: Duration(seconds: 2),
+                      SnackBar(
+                        content: Text(AppStrings.isEn
+                            ? 'This plan is overdue and cannot be edited.'
+                            : 'Jadwal telah terlewat dan tidak dapat diedit.'),
+                        duration: const Duration(seconds: 2),
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
@@ -265,9 +275,9 @@ class PlanCard extends StatelessWidget {
                                   width: 1,
                                 ),
                               ),
-                              child: const Text(
-                                'TERLEWAT',
-                                style: TextStyle(
+                              child: Text(
+                                AppStrings.overdue,
+                                style: const TextStyle(
                                   fontSize: 8.5,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: 0.5,
@@ -286,9 +296,9 @@ class PlanCard extends StatelessWidget {
                                   width: 1,
                                 ),
                               ),
-                              child: const Text(
-                                'SELESAI',
-                                style: TextStyle(
+                              child: Text(
+                                AppStrings.completed,
+                                style: const TextStyle(
                                   fontSize: 8.5,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: 0.5,
@@ -318,70 +328,70 @@ class PlanCard extends StatelessWidget {
                       // Baris 3: Meta Terpadu (Waktu Alarm, Hitung Mundur, Kategori, & Aksi Edit)
                       Row(
                         children: [
-                          if (plan.isAlarmEnabled) ...[
-                            Icon(
-                              Icons.alarm_rounded,
-                              size: 12,
-                              color: textNotes,
-                            ),
-                            const SizedBox(width: 4),
-                          ],
-                          Text(
-                            timeStr,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              fontFamily: 'monospace',
-                              color: textNotes,
+                          Expanded(
+                            child: Row(
+                              children: [
+                                if (plan.isAlarmEnabled) ...[
+                                  Icon(
+                                    Icons.alarm_rounded,
+                                    size: 12,
+                                    color: textNotes,
+                                  ),
+                                  const SizedBox(width: 4),
+                                ],
+                                Text(
+                                  timeStr,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    fontFamily: 'monospace',
+                                    color: textNotes,
+                                  ),
+                                ),
+                                if (!plan.isCompleted && !isExpired) ...[
+                                  const SizedBox(width: 6),
+                                  Text('•',
+                                      style: TextStyle(
+                                          fontSize: 10, color: textNotes)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _getTimeRemainingText(plan.scheduledTime),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: accentColor,
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(width: 6),
+                                Text('•',
+                                    style: TextStyle(
+                                        fontSize: 10, color: textNotes)),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    AppStrings.categoryName(plan.category)
+                                        .toUpperCase(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.5,
+                                      color: textNotes,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          if (!plan.isCompleted && !isExpired) ...[
-                            const SizedBox(width: 6),
-                            Text('•', style: TextStyle(fontSize: 10, color: textNotes)),
-                            const SizedBox(width: 6),
-                            Text(
-                              _getTimeRemainingText(plan.scheduledTime),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: accentColor,
-                              ),
-                            ),
-                          ],
-                          const SizedBox(width: 6),
-                          Text('•', style: TextStyle(fontSize: 10, color: textNotes)),
-                          const SizedBox(width: 6),
-                          Text(
-                            plan.category.toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.5,
-                              color: textNotes,
-                            ),
-                          ),
-                          if (plan.repeatType != 'none') ...[
-                            const SizedBox(width: 6),
-                            Text('•', style: TextStyle(fontSize: 10, color: textNotes)),
-                            const SizedBox(width: 6),
-                            Text(
-                              plan.repeatType == 'daily'
-                                  ? 'Tiap Hari'
-                                  : (plan.repeatType == 'weekdays' ? 'Sen-Jum' : 'Sab-Min'),
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: textNotes,
-                              ),
-                            ),
-                          ],
-                          const Spacer(),
-                          if (onEdit != null && !isExpired && !plan.isCompleted)
+                          if (onEdit != null && !isExpired && !plan.isCompleted) ...[
+                            const SizedBox(width: 8),
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  'Edit',
+                                  AppStrings.edit,
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
@@ -396,6 +406,7 @@ class PlanCard extends StatelessWidget {
                                 ),
                               ],
                             ),
+                          ],
                         ],
                       ),
                     ],

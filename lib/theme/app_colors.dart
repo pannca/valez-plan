@@ -76,25 +76,22 @@ class AppColors {
   // ===========================================================================
   static const List<String> categories = [
     'Kerja',
-    'Belajar',
-    'Ibadah',
-    'Istirahat',
-    'Santai',
-    'Umum',
+    'Pribadi',
+    'Kesehatan',
   ];
 
   static IconData categoryIcon(String category) {
     switch (category.toLowerCase()) {
       case 'kerja':
-        return Icons.business_center_rounded;
       case 'belajar':
-        return Icons.auto_stories_rounded;
+        return Icons.business_center_rounded;
+      case 'pribadi':
       case 'ibadah':
-        return Icons.spa_rounded;
-      case 'istirahat':
-        return Icons.local_cafe_rounded;
       case 'santai':
-        return Icons.sports_esports_rounded;
+        return Icons.person_rounded;
+      case 'kesehatan':
+      case 'istirahat':
+        return Icons.spa_rounded;
       default:
         return Icons.task_alt_rounded;
     }
@@ -104,17 +101,17 @@ class AppColors {
   static Color categoryTone(String category, bool isDark) {
     switch (category.toLowerCase()) {
       case 'kerja':
-        return isDark ? const Color(0xFF3B82F6) : const Color(0xFF1F2DE6);
       case 'belajar':
-        return isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB);
+        return isDark ? const Color(0xFF3B82F6) : const Color(0xFF1F2DE6);
+      case 'pribadi':
       case 'ibadah':
-        return isDark ? const Color(0xFF93C5FD) : const Color(0xFF3B82F6);
-      case 'istirahat':
-        return isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569);
       case 'santai':
-        return isDark ? const Color(0xFF64748B) : const Color(0xFF64748B);
+        return isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB);
+      case 'kesehatan':
+      case 'istirahat':
+        return isDark ? const Color(0xFF93C5FD) : const Color(0xFF38BDF8);
       default:
-        return isDark ? const Color(0xFF475569) : const Color(0xFF94A3B8);
+        return isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569);
     }
   }
 }

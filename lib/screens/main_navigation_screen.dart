@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/language_service.dart';
 import '../theme/app_colors.dart';
 import 'home_screen.dart';
 import 'history_screen.dart';
@@ -43,9 +44,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildNavItem(0, Icons.view_timeline_rounded, 'Timeline'),
-                _buildNavItem(1, Icons.history_rounded, 'Riwayat'),
-                _buildNavItem(2, Icons.settings_rounded, 'Pengaturan'),
+                _buildNavItem(0, Icons.view_timeline_rounded, AppStrings.navTimeline),
+                _buildNavItem(1, Icons.history_rounded, AppStrings.navHistory),
+                _buildNavItem(2, Icons.settings_rounded, AppStrings.navSettings),
               ],
             ),
           ),

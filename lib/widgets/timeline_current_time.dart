@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../services/language_service.dart';
 import '../theme/app_colors.dart';
 
 class TimelineCurrentTimeIndicator extends StatefulWidget {
@@ -77,7 +78,7 @@ class _TimelineCurrentTimeIndicatorState
           ),
           const SizedBox(width: 8),
           Text(
-            'SEKARANG',
+            AppStrings.now,
             style: TextStyle(
               fontSize: 9,
               fontWeight: FontWeight.w800,

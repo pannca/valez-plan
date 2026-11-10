@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../services/language_service.dart';
 import '../theme/app_colors.dart';
 
 class DaySelectorBar extends StatelessWidget {
@@ -41,7 +42,9 @@ class DaySelectorBar extends StatelessWidget {
               day.month == now.month &&
               day.day == now.day;
 
-          final dayName = DateFormat('EEE').format(day).toUpperCase();
+          final dayName = DateFormat('EEE', LanguageService.instance.effectiveLanguage)
+              .format(day)
+              .toUpperCase();
           final dayNum = day.day.toString();
 
           return GestureDetector(

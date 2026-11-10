@@ -4,6 +4,7 @@ import 'package:alarm/alarm.dart';
 import '../models/plan_model.dart';
 import '../services/database_service.dart';
 import '../services/alarm_service.dart';
+import '../services/language_service.dart';
 import '../theme/app_colors.dart';
 
 class AlarmRingingScreen extends StatefulWidget {
@@ -194,7 +195,7 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
     final rawTitle = _plan?.title ?? widget.alarmSettings.notificationSettings.title;
     final cleanTitle = rawTitle.replaceAll('⏰ ValezPlan: ', '').replaceAll('⏰ ', '');
     final notes = _plan?.notes ?? widget.alarmSettings.notificationSettings.body;
-    final category = _plan?.category ?? 'Umum';
+    final category = _plan?.category ?? 'Kerja';
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = AppColors.bg(isDark);
     final surface = AppColors.surface(isDark);
@@ -341,7 +342,8 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                                       ),
                                       const SizedBox(width: 6),
                                       Text(
-                                        category.toUpperCase(),
+                                        AppStrings.categoryName(category)
+                                            .toUpperCase(),
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w800,
@@ -434,14 +436,16 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                                   ),
                                 ),
                                 onPressed: _isProcessing ? null : _handleStopAlarm,
-                                child: const Row(
+                                child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.check_rounded, size: 20, color: Colors.white),
-                                    SizedBox(width: 8),
+                                    const Icon(Icons.check_rounded, size: 20, color: Colors.white),
+                                    const SizedBox(width: 8),
                                     Text(
-                                      'Saya Siap (Matikan Pengingat)',
-                                      style: TextStyle(
+                                      AppStrings.isEn
+                                          ? "I'm Ready (Dismiss)"
+                                          : 'Saya Siap (Matikan Pengingat)',
+                                      style: const TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w700,
                                         color: Colors.white,
@@ -466,14 +470,14 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                                   ),
                                 ),
                                 onPressed: _isProcessing ? null : _handleCompleteNow,
-                                child: const Row(
+                                child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.check_circle_rounded, size: 20, color: Colors.white),
-                                    SizedBox(width: 8),
+                                    const Icon(Icons.check_circle_rounded, size: 20, color: Colors.white),
+                                    const SizedBox(width: 8),
                                     Text(
-                                      'Kerjakan Sekarang',
-                                      style: TextStyle(
+                                      AppStrings.isEn ? 'Do It Now' : 'Kerjakan Sekarang',
+                                      style: const TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w700,
                                         color: Colors.white,
@@ -508,7 +512,7 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                                           Icon(Icons.update_rounded, size: 18, color: accentColor),
                                           const SizedBox(width: 6),
                                           Text(
-                                            'Tunda 5m',
+                                            AppStrings.isEn ? 'Snooze 5m' : 'Tunda 5m',
                                             style: TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w700,
@@ -539,14 +543,14 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                                         ),
                                       ),
                                       onPressed: _isProcessing ? null : _handleStopAlarm,
-                                      child: const Row(
+                                      child: Row(
                                         mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
-                                          Icon(Icons.close_rounded, size: 18, color: AppColors.danger),
-                                          SizedBox(width: 6),
+                                          const Icon(Icons.close_rounded, size: 18, color: AppColors.danger),
+                                          const SizedBox(width: 6),
                                           Text(
-                                            'Matikan',
-                                            style: TextStyle(
+                                            AppStrings.stopAlarm,
+                                            style: const TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w700,
                                               color: AppColors.danger,

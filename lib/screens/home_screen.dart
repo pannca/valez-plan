@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../models/plan_model.dart';
 import '../services/database_service.dart';
 import '../services/alarm_service.dart';
+import '../services/language_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/plan_card.dart';
 import '../widgets/timeline_current_time.dart';
@@ -89,9 +90,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (plan.id == null) return;
     if (value && ToleranceService.instance.isPlanExpired(plan)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Jadwal telah terlewat dan terkunci.'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(AppStrings.planOverdueLocked),
+          duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -99,16 +100,321 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
     if (!value) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Jadwal sudah selesai dan terkunci.'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(AppStrings.planCompletedLocked),
+          duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),
       );
       return;
     }
+
+    final now = DateTime.now();
+    // Jika waktu jadwal belum tiba, minta konfirmasi via Bottom Sheet
+    if (now.isBefore(plan.scheduledTime)) {
+      final confirmed = await _showEarlyCompletionSheet(plan);
+      if (confirmed != true) {
+        return; // Dibatalkan pengguna
+      }
+    }
+
     await DatabaseService.instance.toggleComplete(plan.id!, value);
+    if (plan.isAlarmEnabled) {
+      await AlarmService.instance.cancelAlarm(plan.id!);
+    }
     _loadPlansForDate(_selectedDate);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppStrings.planMarkedComplete(plan.title)),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<bool?> _showEarlyCompletionSheet(PlanModel plan) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sheetBg = AppColors.surface(isDark);
+    final cardBg = AppColors.surfaceSubtle(isDark);
+    final borderColor = AppColors.border(isDark);
+    final textMain = AppColors.ink(isDark);
+    final textMuted = AppColors.muted(isDark);
+    final accentColor = AppColors.accent(isDark);
+    const warningColor = AppColors.warning;
+
+    final now = DateTime.now();
+    final diff = plan.scheduledTime.difference(now);
+    String remainingText;
+    if (diff.inDays > 0) {
+      remainingText = AppStrings.daysLeft(diff.inDays);
+    } else if (diff.inHours > 0) {
+      final mins = diff.inMinutes % 60;
+      remainingText = AppStrings.hoursLeft(diff.inHours, mins);
+    } else if (diff.inMinutes > 0) {
+      remainingText = AppStrings.minLeft(diff.inMinutes);
+    } else {
+      remainingText = AppStrings.shortly;
+    }
+
+    final scheduledTimeStr = DateFormat('HH:mm').format(plan.scheduledTime);
+    final isPlanToday = plan.scheduledTime.year == now.year &&
+        plan.scheduledTime.month == now.month &&
+        plan.scheduledTime.day == now.day;
+    final scheduledDateStr = isPlanToday
+        ? AppStrings.today
+        : DateFormat('EEE, d MMM', LanguageService.instance.effectiveLanguage)
+            .format(plan.scheduledTime);
+
+    return showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          decoration: BoxDecoration(
+            color: sheetBg,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 14,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Handle Bar
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: borderColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Header Peringatan / Konfirmasi
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.accentSoft(isDark),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.accentBorder(isDark),
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.fast_forward_rounded,
+                      color: accentColor,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          AppStrings.completeEarlyTitle,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: textMain,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          AppStrings.completeEarlySubtitle(remainingText),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Detail Jadwal Card
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: borderColor),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3.5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.accentSoft(isDark),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '$scheduledDateStr, $scheduledTimeStr',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              fontFamily: 'monospace',
+                              color: accentColor,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(
+                          AppColors.categoryIcon(plan.category),
+                          size: 13,
+                          color: textMuted,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          AppStrings.categoryName(plan.category).toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                            color: textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      plan.title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: textMain,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (plan.notes.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        plan.notes,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: textMuted,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Info Box Disiplin & Alarm
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.statusSoft(warningColor, isDark),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppColors.statusBorder(warningColor, isDark),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.info_outline_rounded,
+                      size: 16,
+                      color: warningColor,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        plan.isAlarmEnabled
+                            ? AppStrings.completeEarlyNoticeAlarm
+                            : AppStrings.completeEarlyNoticeNoAlarm,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: textMain,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Tombol Konfirmasi Selesaikan
+              SizedBox(
+                height: 48,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  icon: const Icon(Icons.check_rounded, size: 20),
+                  label: Text(
+                    AppStrings.yesCompleteNow,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accentColor,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // Tombol Batal
+              SizedBox(
+                height: 44,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: borderColor),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    AppStrings.cancel,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: textMuted,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _deletePlan(PlanModel plan) async {
@@ -139,9 +445,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _openEditPlanSheet(PlanModel plan) {
     if (plan.isCompleted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Jadwal sudah selesai dan tidak dapat diedit.'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(AppStrings.isEn
+              ? 'This plan is completed and cannot be edited.'
+              : 'Jadwal sudah selesai dan tidak dapat diedit.'),
+          duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -149,9 +457,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
     if (ToleranceService.instance.isPlanExpired(plan)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Jadwal telah terlewat dan tidak dapat diedit.'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(AppStrings.isEn
+              ? 'This plan is overdue and cannot be edited.'
+              : 'Jadwal telah terlewat dan tidak dapat diedit.'),
+          duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -219,7 +529,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final completedCount = _plans.where((p) => p.isCompleted).length;
-    final dateStr = DateFormat('EEEE, d MMMM').format(_selectedDate);
+    final dateStr = DateFormat(
+            'EEEE, d MMMM', LanguageService.instance.effectiveLanguage)
+        .format(_selectedDate);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textMain = AppColors.ink(isDark);
     final textMuted = AppColors.muted(isDark);
@@ -423,7 +735,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  'Belum Ada Jadwal',
+                                  AppStrings.noPlansYet,
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w700,
@@ -432,7 +744,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  'Ketuk + untuk membuat jadwal baru',
+                                  AppStrings.noPlansSubtitle,
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: textMuted,
@@ -459,9 +771,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           borderRadius: BorderRadius.circular(14),
         ),
         icon: const Icon(Icons.add_rounded, size: 22),
-        label: const Text(
-          'Jadwal Baru',
-          style: TextStyle(
+        label: Text(
+          AppStrings.newPlan,
+          style: const TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 14,
             letterSpacing: 0.2,

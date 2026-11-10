@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/language_service.dart';
 import '../services/theme_service.dart';
 import '../services/alarm_sound_service.dart';
 import '../services/system_permission_service.dart';
@@ -34,7 +35,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               // Judul Pengaturan
               Text(
-                'Pengaturan',
+                AppStrings.settingsHeader,
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
@@ -45,7 +46,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 20),
 
               // SECTION 1: TAMPILAN (TEMA)
-              _buildSectionHeader('TAMPILAN', textMuted),
+              _buildSectionHeader(AppStrings.appearanceSection, textMuted),
               const SizedBox(height: 8),
 
               Container(
@@ -77,7 +78,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              isDark ? 'Mode Gelap' : 'Mode Terang',
+                              isDark ? AppStrings.darkMode : AppStrings.lightMode,
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
@@ -86,7 +87,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              isDark ? 'Tema gelap aktif' : 'Tema terang aktif',
+                              isDark ? AppStrings.darkThemeActive : AppStrings.lightThemeActive,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: textMuted,
@@ -112,8 +113,77 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 24),
 
-              // SECTION 2: DISIPLIN WAKTU
-              _buildSectionHeader('DISIPLIN WAKTU', textMuted),
+              // SECTION 2: BAHASA (LANGUAGE) - Opsi B (Bottom Sheet)
+              _buildSectionHeader(AppStrings.languageSection, textMuted),
+              const SizedBox(height: 8),
+
+              ValueListenableBuilder<String>(
+                valueListenable: LanguageService.instance.languageNotifier,
+                builder: (context, _, __) {
+                  return InkWell(
+                    onTap: () => _showLanguageSheet(context),
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: borderColor),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppColors.accentSoft(isDark),
+                            ),
+                            child: Icon(
+                              Icons.translate_rounded,
+                              color: accentColor,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  AppStrings.appLanguage,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: textMain,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  LanguageService.instance.preferenceLabel,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: textMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            color: textMuted,
+                            size: 20,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+
+              // SECTION 3: DISIPLIN WAKTU
+              _buildSectionHeader(AppStrings.timeDiscipline, textMuted),
               const SizedBox(height: 8),
 
               ValueListenableBuilder<int>(
@@ -150,7 +220,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Toleransi Keterlambatan',
+                                    AppStrings.latenessTolerance,
                                     style: TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w700,
@@ -159,7 +229,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    'Batas waktu sebelum jadwal dikunci terlewat',
+                                    AppStrings.toleranceSubtitle,
                                     style: TextStyle(
                                         fontSize: 12, color: textMuted),
                                   ),
@@ -171,10 +241,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         const SizedBox(height: 14),
                         Row(
                           children: [
-                            (30, '30 mnt'),
-                            (60, '60 mnt'),
-                            (120, '2 jam'),
-                            (-1, 'Akhir hari'),
+                            (30, AppStrings.isEn ? '30 min' : '30 mnt'),
+                            (60, AppStrings.isEn ? '60 min' : '60 mnt'),
+                            (120, AppStrings.isEn ? '2 hrs' : '2 jam'),
+                            (-1, AppStrings.endOfDay),
                           ].map((item) {
                             final isSelected = currentTolerance == item.$1;
                             return Expanded(
@@ -226,8 +296,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 24),
 
-              // SECTION 3: SISTEM ALARM
-              _buildSectionHeader('ALARM & NOTIFIKASI', textMuted),
+              // SECTION 4: SISTEM ALARM
+              _buildSectionHeader(AppStrings.systemPermissions, textMuted),
               const SizedBox(height: 8),
 
               // Monitor Status Izin Alarm & Sistem
@@ -277,7 +347,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Status Izin Alarm',
+                                  AppStrings.isEn
+                                      ? 'Alarm Permission Status'
+                                      : 'Status Izin Alarm',
                                   style: TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w700,
@@ -287,8 +359,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 const SizedBox(height: 2),
                                 Text(
                                   isReady
-                                      ? 'Semua izin aktif'
-                                      : '${status.issueCount} izin perlu diaktifkan',
+                                      ? (AppStrings.isEn
+                                          ? 'All permissions active'
+                                          : 'Semua izin aktif')
+                                      : (AppStrings.isEn
+                                          ? '${status.issueCount} permissions need activation'
+                                          : '${status.issueCount} izin perlu diaktifkan'),
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: isReady ? textMuted : statusColor,
@@ -308,7 +384,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              isReady ? 'AKTIF' : 'PERIKSA',
+                              isReady
+                                  ? (AppStrings.isEn ? 'ACTIVE' : 'AKTIF')
+                                  : (AppStrings.isEn ? 'CHECK' : 'PERIKSA'),
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w800,
@@ -324,7 +402,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 12),
 
-              // Kartu Pilihan & Upload Suara Alarm (Bebas Violet, Tegas Netral & Cobalt)
+              // Kartu Pilihan & Upload Suara Alarm
               Container(
                 decoration: BoxDecoration(
                   color: cardBg,
@@ -355,7 +433,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Suara Alarm',
+                                AppStrings.isEn ? 'Alarm Sound' : 'Suara Alarm',
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
@@ -386,7 +464,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           valueListenable: AlarmSoundService.instance.isPlayingPreviewNotifier,
                           builder: (_, isPlaying, __) {
                             return IconButton(
-                              tooltip: isPlaying ? 'Berhenti' : 'Putar Cuplikan',
+                              tooltip: isPlaying
+                                  ? (AppStrings.isEn ? 'Stop' : 'Berhenti')
+                                  : (AppStrings.isEn
+                                      ? 'Play Preview'
+                                      : 'Putar Cuplikan'),
                               onPressed: () => AlarmSoundService.instance.togglePreview(),
                               icon: Container(
                                 padding: const EdgeInsets.all(8),
@@ -442,7 +524,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         const SizedBox(width: 10),
                                         Expanded(
                                           child: Text(
-                                            'Suara alarm: ${AlarmSoundService.instance.currentSoundName}',
+                                            '${AppStrings.isEn ? "Alarm sound" : "Suara alarm"}: ${AlarmSoundService.instance.currentSoundName}',
                                             style: TextStyle(
                                                 color: textMain, fontWeight: FontWeight.w600),
                                           ),
@@ -454,9 +536,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               }
                             },
                             icon: Icon(Icons.upload_file_rounded, size: 18, color: accentColor),
-                            label: const Text(
-                              'Pilih Audio',
-                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                            label: Text(
+                              AppStrings.isEn ? 'Choose Audio' : 'Pilih Audio',
+                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                             ),
                           ),
                         ),
@@ -483,7 +565,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           borderRadius: BorderRadius.circular(12),
                                         ),
                                         content: Text(
-                                          'Suara default dipulihkan.',
+                                          AppStrings.isEn
+                                              ? 'Default sound restored.'
+                                              : 'Suara default dipulihkan.',
                                           style: TextStyle(color: textMain),
                                         ),
                                       ),
@@ -491,7 +575,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   }
                                 },
                                 icon: const Icon(Icons.refresh_rounded, size: 16),
-                                label: const Text('Reset', style: TextStyle(fontSize: 12)),
+                                label: Text(
+                                  AppStrings.isEn ? 'Reset' : 'Reset',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
                               ),
                             );
                           },
@@ -500,7 +587,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Format yang didukung: MP3, WAV, AAC, M4A',
+                      AppStrings.isEn
+                          ? 'Supported formats: MP3, WAV, AAC, M4A'
+                          : 'Format yang didukung: MP3, WAV, AAC, M4A',
                       style: TextStyle(
                         fontSize: 11,
                         color: textMuted,
@@ -512,8 +601,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 24),
 
-              // SECTION 3: TENTANG APLIKASI
-              _buildSectionHeader('TENTANG', textMuted),
+              // SECTION 5: TENTANG APLIKASI
+              _buildSectionHeader(AppStrings.aboutApp, textMuted),
               const SizedBox(height: 8),
 
               Container(
@@ -551,7 +640,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                             ),
                             Text(
-                              'Versi 1.1.0',
+                              '${AppStrings.version} 1.2.0',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: textMuted,
@@ -563,7 +652,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(height: 14),
                     Text(
-                      'Daily planner & alarm harian berbasis timeline.',
+                      AppStrings.isEn
+                          ? 'Timeline-based daily planner & alarm application.'
+                          : 'Daily planner & alarm harian berbasis timeline.',
                       style: TextStyle(
                         fontSize: 13,
                         height: 1.4,
@@ -576,6 +667,232 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 40),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showLanguageSheet(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sheetBg = AppColors.surface(isDark);
+    final cardBg = AppColors.surfaceSubtle(isDark);
+    final borderColor = AppColors.border(isDark);
+    final textMain = AppColors.ink(isDark);
+    final textMuted = AppColors.muted(isDark);
+    final accentColor = AppColors.accent(isDark);
+    final currentPref = LanguageService.instance.currentPreference;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Container(
+          decoration: BoxDecoration(
+            color: sheetBg,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 14,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Handle Bar
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: borderColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // Header
+              Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: AppColors.accentSoft(isDark),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.accentBorder(isDark),
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.translate_rounded,
+                      color: accentColor,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          AppStrings.selectLanguage,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: textMain,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          AppStrings.selectLanguageDesc,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+
+              // Opsi 1: Ikuti Sistem (System Default)
+              _buildLanguageOption(
+                ctx: ctx,
+                code: 'system',
+                title: AppStrings.systemDefault,
+                subtitle: AppStrings.systemDefaultDesc,
+                badge: '⚙️',
+                isSelected: currentPref == 'system',
+                isDark: isDark,
+                cardBg: cardBg,
+                borderColor: borderColor,
+                accentColor: accentColor,
+                textMain: textMain,
+                textMuted: textMuted,
+              ),
+              const SizedBox(height: 10),
+
+              // Opsi 2: Bahasa Indonesia
+              _buildLanguageOption(
+                ctx: ctx,
+                code: 'id',
+                title: AppStrings.indonesian,
+                subtitle: AppStrings.indonesianDesc,
+                badge: '🇮🇩',
+                isSelected: currentPref == 'id',
+                isDark: isDark,
+                cardBg: cardBg,
+                borderColor: borderColor,
+                accentColor: accentColor,
+                textMain: textMain,
+                textMuted: textMuted,
+              ),
+              const SizedBox(height: 10),
+
+              // Opsi 3: English
+              _buildLanguageOption(
+                ctx: ctx,
+                code: 'en',
+                title: AppStrings.english,
+                subtitle: AppStrings.englishDesc,
+                badge: '🇬🇧',
+                isSelected: currentPref == 'en',
+                isDark: isDark,
+                cardBg: cardBg,
+                borderColor: borderColor,
+                accentColor: accentColor,
+                textMain: textMain,
+                textMuted: textMuted,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLanguageOption({
+    required BuildContext ctx,
+    required String code,
+    required String title,
+    required String subtitle,
+    required String badge,
+    required bool isSelected,
+    required bool isDark,
+    required Color cardBg,
+    required Color borderColor,
+    required Color accentColor,
+    required Color textMain,
+    required Color textMuted,
+  }) {
+    return InkWell(
+      onTap: () async {
+        Navigator.pop(ctx);
+        await LanguageService.instance.setLanguage(code);
+        if (mounted) setState(() {});
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.accentSoft(isDark) : cardBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? accentColor : borderColor,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Text(badge, style: const TextStyle(fontSize: 22)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: isSelected ? accentColor : textMain,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Icon(
+                Icons.check_circle_rounded,
+                color: accentColor,
+                size: 20,
+              )
+            else
+              Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: borderColor, width: 1.5),
+                ),
+              ),
+          ],
         ),
       ),
     );

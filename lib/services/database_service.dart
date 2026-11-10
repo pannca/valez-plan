@@ -34,7 +34,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
       onOpen: (db) async {
@@ -42,6 +42,7 @@ class DatabaseService {
         await db.execute('CREATE INDEX IF NOT EXISTS idx_plans_scheduled_time ON plans(scheduled_time)');
         await db.execute('CREATE INDEX IF NOT EXISTS idx_plans_is_completed ON plans(is_completed)');
         await db.execute('CREATE INDEX IF NOT EXISTS idx_plans_repeat ON plans(repeat_type)');
+        await db.execute('ALTER TABLE plans ADD COLUMN repeat_until TEXT').catchError((_) {});
       },
     );
   }
@@ -57,7 +58,8 @@ class DatabaseService {
         is_completed INTEGER NOT NULL,
         category TEXT NOT NULL,
         repeat_type TEXT NOT NULL DEFAULT 'none',
-        early_reminder_minutes INTEGER NOT NULL DEFAULT 0
+        early_reminder_minutes INTEGER NOT NULL DEFAULT 0,
+        repeat_until TEXT
       )
     ''');
 
@@ -94,6 +96,9 @@ class DatabaseService {
       await db.execute('CREATE INDEX IF NOT EXISTS idx_plans_is_completed ON plans(is_completed)');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_plans_repeat ON plans(repeat_type)');
     }
+    if (oldVersion < 6) {
+      await db.execute('ALTER TABLE plans ADD COLUMN repeat_until TEXT');
+    }
   }
 
   // Tambah jadwal baru dan mengembalikan ID dari database
@@ -113,12 +118,22 @@ class DatabaseService {
 
   // Sinkronisasi otomatis jadwal berulang (rutinitas) ke tanggal yang dibuka
   Future<void> _syncRecurringPlans(DateTime date) async {
+    final targetDate = DateTime(date.year, date.month, date.day);
+
     if (kIsWeb) {
       final recurringTemplates = _inMemoryPlans
           .where((p) => p.repeatType != 'none')
           .toList();
 
       for (var tmpl in recurringTemplates) {
+        final tmplStartDate = DateTime(tmpl.scheduledTime.year, tmpl.scheduledTime.month, tmpl.scheduledTime.day);
+        if (targetDate.isBefore(tmplStartDate)) continue;
+
+        if (tmpl.repeatUntil != null) {
+          final endOfUntil = DateTime(tmpl.repeatUntil!.year, tmpl.repeatUntil!.month, tmpl.repeatUntil!.day, 23, 59, 59);
+          if (date.isAfter(endOfUntil)) continue;
+        }
+
         if (!_isMatchingRepeat(tmpl.repeatType, date)) continue;
 
         final alreadyExists = _inMemoryPlans.any((p) =>
@@ -135,6 +150,7 @@ class DatabaseService {
             scheduledTime: DateTime(date.year, date.month, date.day,
                 tmpl.scheduledTime.hour, tmpl.scheduledTime.minute),
             isCompleted: false,
+            repeatUntil: tmpl.repeatUntil,
           );
           _inMemoryPlans.add(instance);
         }
@@ -165,6 +181,14 @@ class DatabaseService {
     final Set<String> processedKeys = {};
 
     for (var tmpl in templates) {
+      final tmplStartDate = DateTime(tmpl.scheduledTime.year, tmpl.scheduledTime.month, tmpl.scheduledTime.day);
+      if (targetDate.isBefore(tmplStartDate)) continue;
+
+      if (tmpl.repeatUntil != null) {
+        final endOfUntil = DateTime(tmpl.repeatUntil!.year, tmpl.repeatUntil!.month, tmpl.repeatUntil!.day, 23, 59, 59);
+        if (date.isAfter(endOfUntil)) continue;
+      }
+
       final key = '${tmpl.title}_${tmpl.scheduledTime.hour}:${tmpl.scheduledTime.minute}_${tmpl.repeatType}';
       if (processedKeys.contains(key)) continue;
       processedKeys.add(key);
@@ -194,6 +218,7 @@ class DatabaseService {
           category: tmpl.category,
           repeatType: tmpl.repeatType,
           earlyReminderMinutes: tmpl.earlyReminderMinutes,
+          repeatUntil: tmpl.repeatUntil,
         );
 
         final newId = await db.insert('plans', newInstance.toMap());
@@ -221,6 +246,15 @@ class DatabaseService {
     }
     if (repeatType == 'weekends') {
       return date.weekday == DateTime.saturday || date.weekday == DateTime.sunday;
+    }
+    if (repeatType.startsWith('weekly:')) {
+      final targetWeekday = int.tryParse(repeatType.split(':')[1]);
+      return targetWeekday == date.weekday;
+    }
+    if (repeatType.startsWith('custom:')) {
+      final daysStr = repeatType.split(':')[1];
+      final days = daysStr.split(',').map((e) => int.tryParse(e)).whereType<int>().toSet();
+      return days.contains(date.weekday);
     }
     return false;
   }
@@ -291,34 +325,78 @@ class DatabaseService {
 
   // Hapus semua riwayat yang sudah selesai
   Future<int> deleteCompletedHistory() async {
+    final now = DateTime.now();
+    final endOfToday = DateTime(now.year, now.month, now.day, 23, 59, 59).toIso8601String();
+
     if (kIsWeb) {
       final before = _inMemoryPlans.length;
-      _inMemoryPlans.removeWhere((p) => p.isCompleted);
+      _inMemoryPlans.removeWhere((p) =>
+          p.isCompleted && !p.scheduledTime.isAfter(DateTime(now.year, now.month, now.day, 23, 59, 59)));
+      notifyPlansUpdated();
       return before - _inMemoryPlans.length;
     }
 
     final db = await database;
-    return await db.delete(
+    final toDelete = await db.query(
       'plans',
-      where: 'is_completed = 1',
+      columns: ['id'],
+      where: 'is_completed = 1 AND scheduled_time <= ?',
+      whereArgs: [endOfToday],
     );
+
+    for (final row in toDelete) {
+      final id = row['id'] as int?;
+      if (id != null) {
+        await AlarmService.instance.cancelAlarm(id);
+      }
+    }
+
+    final res = await db.delete(
+      'plans',
+      where: 'is_completed = 1 AND scheduled_time <= ?',
+      whereArgs: [endOfToday],
+    );
+    notifyPlansUpdated();
+    return res;
   }
 
-  // Hapus seluruh riwayat masa lalu dan yang sudah selesai
+  // Hapus seluruh riwayat masa lalu (selesai maupun yang sudah lewat batas toleransi)
   Future<int> clearAllHistory() async {
     final now = DateTime.now();
+    final cutoff = now.subtract(Duration(minutes: ToleranceService.instance.toleranceMinutes)).toIso8601String();
+    final endOfToday = DateTime(now.year, now.month, now.day, 23, 59, 59).toIso8601String();
+
     if (kIsWeb) {
       final before = _inMemoryPlans.length;
-      _inMemoryPlans.removeWhere((p) => p.isCompleted || p.scheduledTime.isBefore(now));
+      _inMemoryPlans.removeWhere((p) =>
+          (p.isCompleted && !p.scheduledTime.isAfter(DateTime(now.year, now.month, now.day, 23, 59, 59))) ||
+          ToleranceService.instance.isPlanExpired(p));
+      notifyPlansUpdated();
       return before - _inMemoryPlans.length;
     }
 
     final db = await database;
-    return await db.delete(
+    final toDelete = await db.query(
       'plans',
-      where: 'is_completed = 1 OR scheduled_time < ?',
-      whereArgs: [now.toIso8601String()],
+      columns: ['id'],
+      where: '(is_completed = 1 AND scheduled_time <= ?) OR scheduled_time < ?',
+      whereArgs: [endOfToday, cutoff],
     );
+
+    for (final row in toDelete) {
+      final id = row['id'] as int?;
+      if (id != null) {
+        await AlarmService.instance.cancelAlarm(id);
+      }
+    }
+
+    final res = await db.delete(
+      'plans',
+      where: '(is_completed = 1 AND scheduled_time <= ?) OR scheduled_time < ?',
+      whereArgs: [endOfToday, cutoff],
+    );
+    notifyPlansUpdated();
+    return res;
   }
 
   // Ambil 1 jadwal berdasarkan ID
@@ -394,6 +472,7 @@ class DatabaseService {
 
   // Hapus jadwal
   Future<int> deletePlan(int id) async {
+    await AlarmService.instance.cancelAlarm(id);
     if (kIsWeb) {
       _inMemoryPlans.removeWhere((p) => p.id == id);
       notifyPlansUpdated();
